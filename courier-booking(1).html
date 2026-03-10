@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SwiftPost — Book a Courier</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--tr:0.3s cubic-bezier(.4,0,.2,1);--r:14px;--rs:10px;}
+[data-theme="light"]{--bg:#F7F4EF;--sf:#FFFFFF;--sf2:#F0EDE7;--bd:#E2DDD6;--bd2:#C8C2B8;--tx:#1A1714;--tx2:#5C5650;--tx3:#9C9590;--ac:#C8490A;--acs:#FDF0EB;--acd:#A03808;--gn:#1A7A4A;--gns:#EBF7F1;--sh:0 2px 16px rgba(26,23,20,0.07);}
+[data-theme="dark"]{--bg:#111010;--sf:#1C1B1A;--sf2:#252320;--bd:#302E2B;--bd2:#403E3A;--tx:#F0EDE8;--tx2:#A8A39C;--tx3:#5C5850;--ac:#E8622A;--acs:#2A1A12;--acd:#F07040;--gn:#3AC87A;--gns:#0E2018;--sh:0 2px 16px rgba(0,0,0,0.4);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;overflow-x:hidden;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);transition:background var(--tr),color var(--tr);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden;width:100%;}
+
+/* NAV */
+nav{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--sf);position:sticky;top:0;z-index:200;transition:background var(--tr),border-color var(--tr);width:100%;}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0;}
+.logo-mark{width:30px;height:30px;background:var(--ac);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;}
+.logo-text{font-family:'DM Serif Display',serif;font-size:17px;color:var(--tx);}
+.nav-r{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+
+/* Language dropdown */
+.lang-wrap{position:relative;}
+.lang-btn{display:flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--sf2);color:var(--tx2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all var(--tr);white-space:nowrap;}
+.lang-btn:hover,.lang-btn.open{border-color:var(--ac);color:var(--ac);background:var(--acs);}
+.lang-arr{font-size:8px;transition:transform var(--tr);}
+.lang-btn.open .lang-arr{transform:rotate(180deg);}
+.lang-drop{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);box-shadow:0 8px 32px rgba(0,0,0,0.15);overflow:hidden;min-width:170px;z-index:500;}
+.lang-drop.show{display:block;}
+.lang-opt{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--tx2);cursor:pointer;transition:background var(--tr);border-bottom:1px solid var(--bd);}
+.lang-opt:last-child{border-bottom:none;}
+.lang-opt:hover{background:var(--sf2);color:var(--tx);}
+.lang-opt.active{color:var(--ac);background:var(--acs);}
+.lang-opt .fl{font-size:16px;}
+.lang-opt .ln{font-weight:600;font-size:13px;}
+.lang-opt .lnn{font-size:11px;color:var(--tx3);}
+
+/* Theme btn */
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all var(--tr);}
+.icon-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--acs);}
+
+/* PAGE */
+.page{width:100%;max-width:1100px;margin:0 auto;padding:20px 16px 80px;}
+@media(min-width:640px){.page{padding:32px 24px 80px;}}
+@media(min-width:1024px){.page{padding:48px 40px 100px;}}
+
+/* HERO */
+.hero{margin-bottom:24px;animation:fadeUp .5s ease both;}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--ac);margin-bottom:10px;}
+.hero-tag span{display:inline-block;width:14px;height:1px;background:var(--ac);}
+.hero h1{font-family:'DM Serif Display',serif;font-size:clamp(26px,6vw,50px);line-height:1.1;letter-spacing:-0.5px;color:var(--tx);margin-bottom:8px;}
+.hero h1 em{font-style:italic;color:var(--ac);}
+.hero p{font-size:14px;color:var(--tx2);font-weight:300;line-height:1.65;max-width:420px;}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:1fr;gap:16px;}
+@media(min-width:860px){.grid{grid-template-columns:1fr 300px;}}
+
+/* CARD */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:18px;overflow:hidden;box-shadow:var(--sh);transition:background var(--tr),border-color var(--tr);animation:fadeUp .5s .1s ease both;}
+
+/* Progress */
+.prog{height:3px;background:var(--bd);}
+.prog-fill{height:100%;background:var(--ac);transition:width .5s ease;}
+
+/* Steps */
+.steps{display:flex;border-bottom:1px solid var(--bd);background:var(--sf2);}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;padding:11px 4px;cursor:pointer;position:relative;gap:4px;}
+.step:not(:last-child)::after{content:'';position:absolute;right:0;top:20%;height:60%;width:1px;background:var(--bd);}
+.sn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:var(--sf2);border:1.5px solid var(--bd2);color:var(--tx3);transition:all var(--tr);}
+.sl{font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--tx3);transition:color var(--tr);}
+.step.active .sn{background:var(--ac);border-color:var(--ac);color:#fff;}
+.step.active .sl{color:var(--ac);}
+.step.done .sn{background:var(--gns);border-color:var(--gn);color:var(--gn);}
+.step.done .sl{color:var(--gn);}
+
+/* Sections */
+.sec{display:none;padding:20px 16px;animation:fadeIn .25s ease;}
+.sec.active{display:block;}
+@media(min-width:480px){.sec{padding:24px 20px;}}
+@media(min-width:640px){.sec{padding:28px 28px;}}
+@keyframes fadeIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.st{font-family:'DM Serif Display',serif;font-size:19px;color:var(--tx);margin-bottom:3px;}
+.ss{font-size:12px;color:var(--tx3);margin-bottom:18px;font-weight:300;}
+
+/* Fields */
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.row.full{grid-template-columns:1fr;}
+.row.three{grid-template-columns:1fr 1fr 1fr;}
+@media(max-width:360px){.row{grid-template-columns:1fr;}.row.three{grid-template-columns:1fr 1fr;}}
+
+.fld{display:flex;flex-direction:column;gap:4px;}
+.fld label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);}
+.fld input,.fld select{padding:11px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:all var(--tr);-webkit-appearance:none;width:100%;}
+.fld input::placeholder{color:var(--tx3);}
+.fld input:focus,.fld select:focus{border-color:var(--ac);background:var(--sf);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 12%,transparent);}
+.fld select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239C9590' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;cursor:pointer;}
+.ico-wrap{position:relative;}.ico-wrap input{padding-left:36px;}.ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--tx3);pointer-events:none;}
+
+/* Divider */
+.rdiv{display:flex;align-items:center;gap:8px;margin:4px 0 10px;}
+.rdiv-line{flex:1;height:1px;background:var(--bd);}
+.rdiv-ic{width:26px;height:26px;border-radius:50%;border:1px solid var(--bd);background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3);}
+
+/* Pickup cards */
+.p-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.p-card{border:1.5px solid var(--bd);border-radius:var(--r);padding:14px 12px;cursor:pointer;transition:all var(--tr);background:var(--bg);}
+.p-card.sel{border-color:var(--ac);background:var(--acs);}
+.p-icon{font-size:22px;margin-bottom:6px;}
+.p-title{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:2px;}
+.p-desc{font-size:11px;color:var(--tx3);line-height:1.4;}
+
+/* Slots */
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.slot{padding:9px 6px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg);cursor:pointer;text-align:center;transition:all var(--tr);}
+.slot.sel{border-color:var(--ac);background:var(--acs);}
+.slot-t{font-size:11px;font-weight:700;color:var(--tx);}
+.slot-l{font-size:10px;color:var(--tx3);margin-top:2px;}
+
+/* Delivery speed */
+.d-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.d-card{border:1.5px solid var(--bd);border-radius:var(--r);padding:11px 6px;cursor:pointer;text-align:center;transition:all var(--tr);background:var(--bg);}
+.d-card.sel{border-color:var(--ac);background:var(--acs);}
+.d-icon{font-size:17px;margin-bottom:4px;}
+.d-name{font-size:11px;font-weight:700;color:var(--tx);}
+.d-eta{font-size:10px;color:var(--tx3);margin-top:2px;}
+
+/* Sub box */
+.sub-box{background:var(--sf2);border-radius:var(--r);padding:13px;border:1px solid var(--bd);margin-bottom:12px;}
+.sub-lbl{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);margin-bottom:9px;}
+
+/* Nav buttons */
+.f-nav{display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid var(--bd);}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:11px 18px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;outline:none;transition:all var(--tr);}
+.btn-p{background:var(--ac);color:#fff;}
+.btn-p:hover{background:var(--acd);transform:translateY(-1px);}
+.btn-g{background:transparent;color:var(--tx2);border:1.5px solid var(--bd);}
+.btn-g:hover{border-color:var(--bd2);color:var(--tx);background:var(--sf2);}
+.btn-full{width:100%;justify-content:center;padding:13px;font-size:14px;}
+
+/* SUMMARY CARD */
+.sum-card{background:var(--sf);border:1px solid var(--bd);border-radius:18px;box-shadow:var(--sh);transition:all var(--tr);animation:fadeUp .5s .2s ease both;}
+@media(min-width:860px){.sum-card{position:sticky;top:70px;}}
+.sum-head{padding:16px 18px 12px;border-bottom:1px solid var(--bd);background:var(--sf2);border-radius:18px 18px 0 0;}
+.sum-title{font-family:'DM Serif Display',serif;font-size:15px;color:var(--tx);}
+.sum-sub{font-size:11px;color:var(--tx3);margin-top:1px;}
+.sum-body{padding:14px 18px;}
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--bd);}
+.sum-row:last-of-type{border-bottom:none;}
+.sum-k{font-size:11px;color:var(--tx3);}
+.sum-v{font-size:11px;color:var(--tx);font-weight:500;text-align:right;max-width:140px;word-break:break-word;}
+
+.price-box{margin-top:12px;background:var(--sf2);border-radius:10px;padding:14px;}
+.price-lbl{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);margin-bottom:2px;}
+.price-big{font-family:'DM Serif Display',serif;font-size:30px;color:var(--tx);line-height:1;}
+.price-big span{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--tx3);font-weight:300;margin-left:2px;}
+.price-lines{margin-top:9px;display:flex;flex-direction:column;gap:4px;}
+.pl{display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);}
+.pl.tot{font-size:12px;color:var(--tx);font-weight:600;padding-top:6px;border-top:1px solid var(--bd);margin-top:2px;}
+
+.track-tag{display:flex;align-items:center;gap:6px;padding:8px 11px;background:var(--gns);border-radius:8px;margin-top:9px;border:1px solid color-mix(in srgb,var(--gn) 20%,transparent);}
+.tag-dot{width:6px;height:6px;border-radius:50%;background:var(--gn);animation:pulse 2s ease infinite;flex-shrink:0;}
+.tag-txt{font-size:10px;color:var(--gn);font-weight:600;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* PAY */
+.pay-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.pay-card{border:1.5px solid var(--bd);border-radius:var(--r);padding:11px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;background:var(--bg);transition:all var(--tr);}
+.pay-card.sel{border-color:var(--ac);background:var(--acs);}
+.pay-name{font-size:12px;font-weight:700;color:var(--tx);}
+.pay-sub{font-size:10px;color:var(--tx3);margin-top:1px;}
+
+/* SUCCESS */
+.success{display:none;padding:28px 16px;text-align:center;animation:fadeIn .4s ease;}
+.success.active{display:block;}
+.suc-icon{width:60px;height:60px;background:var(--gns);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;border:2px solid var(--gn);}
+.suc-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--tx);margin-bottom:7px;}
+.suc-sub{font-size:13px;color:var(--tx2);margin-bottom:20px;line-height:1.6;font-weight:300;}
+.track-box{background:var(--sf2);border-radius:var(--r);padding:13px;margin-bottom:14px;border:1px solid var(--bd);}
+.track-lbl-s{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);margin-bottom:4px;}
+.track-num{font-family:'DM Serif Display',serif;font-size:20px;color:var(--ac);letter-spacing:3px;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="index.html">
+    <div class="logo-mark">✦</div>
+    <span class="logo-text">SwiftPost</span>
+  </a>
+  <div class="nav-r">
+    <!-- Language -->
+    <div class="lang-wrap" id="lw">
+      <button class="lang-btn" id="lbtn" onclick="toggleLang(event)">
+        <span id="lfl">🇮🇳</span>
+        <span id="lnm">EN</span>
+        <span class="lang-arr" id="larr">▼</span>
+      </button>
+      <div class="lang-drop" id="ldrop">
+        <div class="lang-opt active" onclick="setLang('en','🇮🇳','EN',this)"><span class="fl">🇮🇳</span><div><div class="ln">English</div><div class="lnn">English</div></div></div>
+        <div class="lang-opt" onclick="setLang('hi','🇮🇳','हिं',this)"><span class="fl">🇮🇳</span><div><div class="ln">Hindi</div><div class="lnn">हिन्दी</div></div></div>
+        <div class="lang-opt" onclick="setLang('mr','🇮🇳','मरा',this)"><span class="fl">🇮🇳</span><div><div class="ln">Marathi</div><div class="lnn">मराठी</div></div></div>
+        <div class="lang-opt" onclick="setLang('gu','🇮🇳','ગુ',this)"><span class="fl">🇮🇳</span><div><div class="ln">Gujarati</div><div class="lnn">ગુજરાતી</div></div></div>
+        <div class="lang-opt" onclick="setLang('ta','🇮🇳','த',this)"><span class="fl">🇮🇳</span><div><div class="ln">Tamil</div><div class="lnn">தமிழ்</div></div></div>
+        <div class="lang-opt" onclick="setLang('bn','🇮🇳','বাং',this)"><span class="fl">🇮🇳</span><div><div class="ln">Bengali</div><div class="lnn">বাংলা</div></div></div>
+        <div class="lang-opt" onclick="setLang('te','🇮🇳','తె',this)"><span class="fl">🇮🇳</span><div><div class="ln">Telugu</div><div class="lnn">తెలుగు</div></div></div>
+      </div>
+    </div>
+    <!-- Theme -->
+    <button class="icon-btn" id="tBtn"><span id="tIco">☽</span></button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page">
+  <div class="hero">
+    <div class="hero-tag"><span></span><span data-t="tag">Courier Booking</span></div>
+    <h1><span data-t="h1">Send it anywhere,</span><br><em data-t="h1b">simply.</em></h1>
+    <p data-t="sub">Fill in the details below and get an instant price. Takes less than two minutes.</p>
+  </div>
+
+  <div class="grid">
+    <!-- FORM CARD -->
+    <div class="card">
+      <div class="prog"><div class="prog-fill" id="pf" style="width:25%"></div></div>
+      <div class="steps" id="stepsBar">
+        <div class="step active" id="tab0" onclick="goStep(0)"><div class="sn" id="sn0">1</div><div class="sl" data-t="s1">Route</div></div>
+        <div class="step" id="tab1" onclick="goStep(1)"><div class="sn" id="sn1">2</div><div class="sl" data-t="s2">Parcel</div></div>
+        <div class="step" id="tab2" onclick="goStep(2)"><div class="sn" id="sn2">3</div><div class="sl" data-t="s3">Pickup</div></div>
+        <div class="step" id="tab3" onclick="goStep(3)"><div class="sn" id="sn3">4</div><div class="sl" data-t="s4">Review</div></div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="sec active" id="s0">
+        <div class="st" data-t="r-t">Where to &amp; from?</div>
+        <div class="ss" data-t="r-s">Enter pickup and delivery addresses.</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);margin-bottom:7px" data-t="FROM">FROM</div>
+        <div class="row"><div class="fld"><label data-t="Name">Name</label><input type="text" id="sName" placeholder="Sender name" oninput="upS()"></div><div class="fld"><label data-t="Phone">Phone</label><div class="ico-wrap"><span class="ico">📞</span><input type="tel" id="sPhone" placeholder="+91 98765 43210" oninput="upS()"></div></div></div>
+        <div class="row"><div class="fld"><label data-t="City">City</label><select id="oCity" onchange="upS()"><option value="" data-t="sc">Select city</option><option>Mumbai</option><option>Delhi</option><option>Bengaluru</option><option>Chennai</option><option>Hyderabad</option><option>Kolkata</option><option>Pune</option><option>Ahmedabad</option><option>Jaipur</option><option>Surat</option><option>Lucknow</option><option>Nagpur</option></select></div><div class="fld"><label data-t="Pincode">Pincode</label><input type="text" id="oPin" placeholder="400001" maxlength="6" inputmode="numeric" oninput="upS()"></div></div>
+        <div class="rdiv"><div class="rdiv-line"></div><div class="rdiv-ic">↕</div><div class="rdiv-line"></div></div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);margin-bottom:7px" data-t="TO">TO</div>
+        <div class="row"><div class="fld"><label data-t="Name">Name</label><input type="text" id="rName" placeholder="Recipient name" oninput="upS()"></div><div class="fld"><label data-t="Phone">Phone</label><div class="ico-wrap"><span class="ico">📞</span><input type="tel" id="rPhone" placeholder="+91 98765 43210" oninput="upS()"></div></div></div>
+        <div class="row"><div class="fld"><label data-t="City">City</label><select id="dCity" onchange="upS()"><option value="" data-t="sc">Select city</option><option>Mumbai</option><option>Delhi</option><option>Bengaluru</option><option>Chennai</option><option>Hyderabad</option><option>Kolkata</option><option>Pune</option><option>Ahmedabad</option><option>Jaipur</option><option>Surat</option><option>Lucknow</option><option>Nagpur</option></select></div><div class="fld"><label data-t="Pincode">Pincode</label><input type="text" id="dPin" placeholder="110001" maxlength="6" inputmode="numeric" oninput="upS()"></div></div>
+        <div class="row full"><div class="fld"><label data-t="Addr">Full Delivery Address</label><input type="text" id="dAddr" placeholder="Street, area, landmark..."></div></div>
+        <div class="f-nav"><div></div><button class="btn btn-p" onclick="nextStep()" data-t="cont">Continue →</button></div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="sec" id="s1">
+        <div class="st" data-t="p-t">What are you sending?</div>
+        <div class="ss" data-t="p-s">Accurate details ensure the correct price.</div>
+        <div class="row full"><div class="fld"><label data-t="Contents">Contents</label><input type="text" id="contents" placeholder="e.g. Clothing, Documents..." oninput="upS()"></div></div>
+        <div class="row three">
+          <div class="fld"><label data-t="wt">Weight (kg)</label><div class="ico-wrap"><span class="ico">⚖️</span><input type="number" id="wt" placeholder="1.5" min="0.1" step="0.1" inputmode="decimal" oninput="calcP()"></div></div>
+          <div class="fld"><label data-t="len">Length (cm)</label><input type="number" id="len" placeholder="30" inputmode="numeric" oninput="calcP()"></div>
+          <div class="fld"><label data-t="wid">Width (cm)</label><input type="number" id="wid" placeholder="20" inputmode="numeric" oninput="calcP()"></div>
+        </div>
+        <div class="row">
+          <div class="fld"><label data-t="ht">Height (cm)</label><input type="number" id="ht" placeholder="15" inputmode="numeric" oninput="calcP()"></div>
+          <div class="fld"><label data-t="val">Value (₹)</label><div class="ico-wrap"><span class="ico">₹</span><input type="number" id="val" placeholder="2000" inputmode="numeric"></div></div>
+        </div>
+        <div class="sub-box">
+          <div class="sub-lbl" data-t="speed">Delivery Speed</div>
+          <div class="d-opts">
+            <div class="d-card sel" onclick="selDel(this,'standard')"><div class="d-icon">📦</div><div class="d-name" data-t="std">Standard</div><div class="d-eta" data-t="se">3–5 days</div></div>
+            <div class="d-card" onclick="selDel(this,'express')"><div class="d-icon">⚡</div><div class="d-name" data-t="exp">Express</div><div class="d-eta" data-t="ee">1–2 days</div></div>
+            <div class="d-card" onclick="selDel(this,'sameday')"><div class="d-icon">🚀</div><div class="d-name" data-t="same">Same Day</div><div class="d-eta" data-t="sme">Today</div></div>
+          </div>
+        </div>
+        <div class="f-nav"><button class="btn btn-g" onclick="prevStep()" data-t="back">← Back</button><button class="btn btn-p" onclick="nextStep()" data-t="cont">Continue →</button></div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="sec" id="s2">
+        <div class="st" data-t="pk-t">How should we collect it?</div>
+        <div class="ss" data-t="pk-s">Pick up from your door, or drop at a hub.</div>
+        <div class="p-opts">
+          <div class="p-card sel" onclick="selPkup(this,'home')"><div class="p-icon">🏠</div><div class="p-title" data-t="hp">Home Pickup</div><div class="p-desc" data-t="hd">We come to you. +₹40 charge.</div></div>
+          <div class="p-card" onclick="selPkup(this,'drop')"><div class="p-icon">📮</div><div class="p-title" data-t="dp">Self Drop-off</div><div class="p-desc" data-t="dd">Drop at nearest hub. Free.</div></div>
+        </div>
+        <div id="slotSec">
+          <div class="sub-lbl" data-t="pt">Preferred Pickup Time</div>
+          <div class="slots">
+            <div class="slot sel" onclick="selSlt(this,'Morning')"><div class="slot-t">9–12 AM</div><div class="slot-l" data-t="mor">Morning</div></div>
+            <div class="slot" onclick="selSlt(this,'Afternoon')"><div class="slot-t">12–4 PM</div><div class="slot-l" data-t="aft">Afternoon</div></div>
+            <div class="slot" onclick="selSlt(this,'Evening')"><div class="slot-t">4–8 PM</div><div class="slot-l" data-t="eve">Evening</div></div>
+          </div>
+          <div class="row full"><div class="fld"><label data-t="pd">Pickup Date</label><input type="date" id="pkDate" onchange="upS()"></div></div>
+        </div>
+        <div id="dropSec" style="display:none">
+          <div class="sub-box"><div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:5px">📍 <span data-t="nh">Nearest Drop-off Hub</span></div><div style="font-size:12px;color:var(--tx2);font-weight:300;line-height:1.6">SwiftPost Hub — Sector 14<br><span style="font-size:11px;color:var(--tx3)" data-t="hh">Open Mon–Sat, 9 AM – 7 PM</span></div></div>
+        </div>
+        <div class="row full" style="margin-top:6px"><div class="fld"><label data-t="si">Special Instructions (optional)</label><input type="text" id="instr" placeholder="e.g. Call before arriving..."></div></div>
+        <div class="f-nav"><button class="btn btn-g" onclick="prevStep()" data-t="back">← Back</button><button class="btn btn-p" onclick="nextStep()" data-t="rev">Review Order →</button></div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="sec" id="s3">
+        <div class="st" data-t="rv-t">Review &amp; Confirm</div>
+        <div class="ss" data-t="rv-s">Check everything before confirming.</div>
+        <div id="revContent"></div>
+        <div class="sub-box">
+          <div class="sub-lbl" data-t="pm">Payment Method</div>
+          <div class="pay-opts">
+            <div class="pay-card sel" id="pay1" onclick="selPay(0)"><input type="radio" name="pay" checked><div><div class="pay-name" data-t="pn">Pay Now</div><div class="pay-sub">UPI / Card</div></div></div>
+            <div class="pay-card" id="pay2" onclick="selPay(1)"><input type="radio" name="pay"><div><div class="pay-name" data-t="pc">Cash on Pickup</div><div class="pay-sub" data-t="pa">Pay the agent</div></div></div>
+          </div>
+        </div>
+        <button class="btn btn-p btn-full" onclick="confirmBooking()" data-t="cf">✦ &nbsp;Confirm Booking</button>
+        <div class="f-nav" style="padding-top:12px;margin-top:0;border-top:none;justify-content:center"><button class="btn btn-g" onclick="prevStep()" style="font-size:12px;padding:8px 14px" data-t="ed">← Edit details</button></div>
+      </div>
+
+      <!-- SUCCESS -->
+      <div class="success" id="sucView">
+        <div class="suc-icon">✓</div>
+        <div class="suc-title" data-t="st">You're all set!</div>
+        <div class="suc-sub" data-t="ss2">Booking confirmed. SMS and email coming shortly.</div>
+        <div class="track-box"><div class="track-lbl-s" data-t="tn">Tracking Number</div><div class="track-num" id="trackNum">SWF-000000</div></div>
+        <div class="track-tag" style="justify-content:center;margin-bottom:18px"><div class="tag-dot"></div><div class="tag-txt" data-t="bc">Booking confirmed · Awaiting pickup</div></div>
+        <button class="btn btn-g btn-full" onclick="resetForm()" data-t="ba">Book another parcel</button>
+      </div>
+    </div>
+
+    <!-- SUMMARY CARD -->
+    <div class="sum-card">
+      <div class="sum-head"><div class="sum-title" data-t="os">Order Summary</div><div class="sum-sub" data-t="ul">Updates as you fill</div></div>
+      <div class="sum-body">
+        <div class="sum-row"><span class="sum-k" data-t="fr">From</span><span class="sum-v" id="s-from"><em style="color:var(--tx3);font-style:italic;font-weight:300" data-t="ne">Not entered</em></span></div>
+        <div class="sum-row"><span class="sum-k" data-t="to2">To</span><span class="sum-v" id="s-to"><em style="color:var(--tx3);font-style:italic;font-weight:300" data-t="ne">Not entered</em></span></div>
+        <div class="sum-row"><span class="sum-k" data-t="co">Contents</span><span class="sum-v" id="s-cnt"><em style="color:var(--tx3);font-style:italic;font-weight:300">—</em></span></div>
+        <div class="sum-row"><span class="sum-k" data-t="we">Weight</span><span class="sum-v" id="s-wt"><em style="color:var(--tx3);font-style:italic;font-weight:300">—</em></span></div>
+        <div class="sum-row"><span class="sum-k" data-t="sp">Speed</span><span class="sum-v" id="s-spd">Standard (3–5 days)</span></div>
+        <div class="sum-row"><span class="sum-k" data-t="cl">Collection</span><span class="sum-v" id="s-pk">Home Pickup</span></div>
+        <div class="price-box">
+          <div class="price-lbl" data-t="ep">Estimated Price</div>
+          <div class="price-big" id="s-price">₹—<span data-t="fw">fill weight</span></div>
+          <div class="price-lines">
+            <div class="pl"><span data-t="fg">Freight</span><span id="pb-fr">₹—</span></div>
+            <div class="pl"><span data-t="pf">Pickup fee</span><span id="pb-pk">₹40</span></div>
+            <div class="pl"><span data-t="gs">GST (18%)</span><span id="pb-gst">₹—</span></div>
+            <div class="pl tot"><span data-t="tot">Total</span><span id="pb-tot">₹—</span></div>
+          </div>
+        </div>
+        <div class="track-tag"><div class="tag-dot"></div><div class="tag-txt" data-t="ft">Free real-time tracking included</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── TRANSLATIONS ────────────────────────────────────
+const T={
+en:{tag:'Courier Booking',h1:'Send it anywhere,',h1b:'simply.',sub:"Fill in the details below and get an instant price. Takes less than two minutes.",s1:'Route',s2:'Parcel',s3:'Pickup',s4:'Review','r-t':'Where to & from?','r-s':'Enter pickup and delivery addresses.','FROM':'FROM','TO':'TO','Name':'Name','Phone':'Phone','City':'City','Pincode':'Pincode','Addr':'Full Delivery Address','sc':'Select city','p-t':'What are you sending?','p-s':'Accurate details ensure the correct price.','Contents':'Contents','wt':'Weight (kg)','len':'Length (cm)','wid':'Width (cm)','ht':'Height (cm)','val':'Value (₹)','speed':'Delivery Speed','std':'Standard','se':'3–5 days','exp':'Express','ee':'1–2 days','same':'Same Day','sme':'Today','pk-t':'How should we collect it?','pk-s':'Pick up from your door, or drop at a hub.','hp':'Home Pickup','hd':'We come to you. +₹40 charge.','dp':'Self Drop-off','dd':'Drop at nearest hub. Free.','pt':'Preferred Pickup Time','mor':'Morning','aft':'Afternoon','eve':'Evening','pd':'Pickup Date','nh':'Nearest Drop-off Hub','hh':'Open Mon–Sat, 9 AM – 7 PM','si':'Special Instructions (optional)','rv-t':'Review & Confirm','rv-s':'Check everything before confirming.','pm':'Payment Method','pn':'Pay Now','pc':'Cash on Pickup','pa':'Pay the agent','cf':'✦  Confirm Booking','back':'← Back','cont':'Continue →','rev':'Review Order →','ed':'← Edit details','st':"You're all set!",'ss2':'Booking confirmed. SMS and email coming shortly.','tn':'Tracking Number','bc':'Booking confirmed · Awaiting pickup','ba':'Book another parcel','os':'Order Summary','ul':'Updates as you fill','fr':'From','to2':'To','co':'Contents','we':'Weight','sp':'Speed','cl':'Collection','ep':'Estimated Price','fw':'fill weight','fg':'Freight','pf':'Pickup fee','gs':'GST (18%)','tot':'Total','ft':'Free real-time tracking included','ne':'Not entered'},
+hi:{tag:'कूरियर बुकिंग',h1:'कहीं भी भेजें,',h1b:'आसानी से।',sub:'नीचे जानकारी भरें और तुरंत कीमत जानें।',s1:'रूट',s2:'पार्सल',s3:'पिकअप',s4:'समीक्षा','r-t':'कहाँ से और कहाँ?','r-s':'पिकअप और डिलीवरी पता दर्ज करें।','FROM':'से','TO':'को','Name':'नाम','Phone':'फ़ोन','City':'शहर','Pincode':'पिनकोड','Addr':'पूरा डिलीवरी पता','sc':'शहर चुनें','p-t':'आप क्या भेज रहे हैं?','p-s':'सही जानकारी से सही कीमत मिलती है।','Contents':'सामग्री','wt':'वजन (kg)','len':'लंबाई (cm)','wid':'चौड़ाई (cm)','ht':'ऊंचाई (cm)','val':'मूल्य (₹)','speed':'डिलीवरी गति','std':'साधारण','se':'3–5 दिन','exp':'एक्सप्रेस','ee':'1–2 दिन','same':'उसी दिन','sme':'आज','pk-t':'हम इसे कैसे लेंगे?','pk-s':'आपके दरवाज़े से उठाएं या हब पर छोड़ें।','hp':'होम पिकअप','hd':'हम आते हैं। +₹40 शुल्क।','dp':'स्वयं छोड़ें','dd':'निकटतम हब पर। मुफ्त।','pt':'पसंदीदा पिकअप समय','mor':'सुबह','aft':'दोपहर','eve':'शाम','pd':'पिकअप तारीख','nh':'निकटतम ड्रॉप हब','hh':'सोम–शनि, 9 AM – 7 PM','si':'विशेष निर्देश (वैकल्पिक)','rv-t':'समीक्षा और पुष्टि','rv-s':'बुकिंग से पहले सब कुछ जांचें।','pm':'भुगतान का तरीका','pn':'अभी भुगतान करें','pc':'पिकअप पर नकद','pa':'एजेंट को दें','cf':'✦  बुकिंग की पुष्टि करें','back':'← वापस','cont':'जारी रखें →','rev':'ऑर्डर देखें →','ed':'← बदलें','st':'सब ठीक है!','ss2':'बुकिंग पुष्टि। जल्द ही SMS और ईमेल आएगा।','tn':'ट्रैकिंग नंबर','bc':'बुकिंग पुष्टि · पिकअप की प्रतीक्षा','ba':'एक और पार्सल बुक करें','os':'ऑर्डर सारांश','ul':'भरते समय अपडेट होता है','fr':'से','to2':'को','co':'सामग्री','we':'वजन','sp':'गति','cl':'संग्रह','ep':'अनुमानित मूल्य','fw':'वजन भरें','fg':'माल भाड़ा','pf':'पिकअप शुल्क','gs':'GST (18%)','tot':'कुल','ft':'मुफ्त ट्रैकिंग शामिल','ne':'दर्ज नहीं किया'},
+gu:{tag:'કૂરિયર બુકિંગ',h1:'ક્યાંય પણ મોકલો,',h1b:'સરળતાથી.',sub:'નીચે વિગત ભરો અને ભાવ જાણો।',s1:'રૂટ',s2:'પાર્સલ',s3:'પિકઅપ',s4:'સમીક્ષા','r-t':'ક્યાંથી અને ક્યાં?','r-s':'પિકઅપ અને ડિલિવરી સરનામું દાખલ કરો.','FROM':'થી','TO':'ને','Name':'નામ','Phone':'ફોન','City':'શહેર','Pincode':'પિનકોડ','Addr':'ડિલિવરી સરનામું','sc':'શહેર પસંદ કરો','p-t':'શું મોકલો છો?','p-s':'સચોટ વિગત સાચો ભાવ આપે.','Contents':'સામગ્રી','wt':'વજન (kg)','len':'લંબાઈ (cm)','wid':'પહોળાઈ (cm)','ht':'ઊંચાઈ (cm)','val':'મૂલ્ય (₹)','speed':'ઝડપ','std':'સામાન્ય','se':'3–5 દિવસ','exp':'એક્સ્પ્રેસ','ee':'1–2 દિવસ','same':'એ જ દિવસ','sme':'આજ','pk-t':'સંગ્રહ કેવી રીતે?','pk-s':'દરવાજેથી અથવા હબ પર.','hp':'હોમ પિકઅપ','hd':'+₹40 ચાર્જ.','dp':'સ્વ-ડ્રૉપ','dd':'નિઃશુલ્ક.','pt':'પ્રિય સમય','mor':'સવાર','aft':'બપોર','eve':'સાંજ','pd':'તારીખ','nh':'ડ્રૉપ હબ','hh':'સોમ–શનિ, 9–7','si':'સૂચनाओ (વૈ.)','rv-t':'સમીક્ષા','rv-s':'પુષ્ટિ પહેલાં તપાસો.','pm':'ચૂકવણી','pn':'અત્યારે','pc':'રોકડ','pa':'એજન્ટ','cf':'✦  પુષ્ટ કરો','back':'← પાછળ','cont':'ચાલુ →','rev':'ઓર્ડર →','ed':'← ફેરફાર','st':'બધું તૈયાર!','ss2':'SMS અને ઈ-મેઈલ આવશે.','tn':'ટ્રૅકિંગ','bc':'પુષ્ટ · પ્રતીક્ષા','ba':'બીજો પાર્સલ','os':'સારાંશ','ul':'ભરતી વખતે','fr':'થી','to2':'ને','co':'સામગ્રી','we':'વજન','sp':'ઝડપ','cl':'સંગ્રહ','ep':'ભાવ','fw':'વજન ભરો','fg':'ભાડું','pf':'ફી','gs':'GST','tot':'કુલ','ft':'ટ્રૅકિંગ મફત','ne':'ખાલી'},
+ta:{tag:'கூரியர் முன்பதிவு',h1:'எங்கும் அனுப்புங்கள்,',h1b:'எளிதாக.',sub:'விவரங்களை நிரப்பி விலை அறியுங்கள்.',s1:'வழி',s2:'பார்சல்',s3:'பிக்அப்',s4:'மதிப்பாய்வு','r-t':'எங்கிருந்து & எங்கே?','r-s':'முகவரி உள்ளிடுக.','FROM':'இருந்து','TO':'க்கு','Name':'பெயர்','Phone':'தொலைபேசி','City':'நகரம்','Pincode':'பின்','Addr':'டெலிவரி முகவரி','sc':'நகரம் தேர்ந்தெடு','p-t':'என்ன அனுப்புகிறீர்கள்?','p-s':'சரியான விவரம் சரியான விலை.','Contents':'உள்ளடக்கம்','wt':'எடை (kg)','len':'நீளம் (cm)','wid':'அகலம் (cm)','ht':'உயரம் (cm)','val':'மதிப்பு (₹)','speed':'டெலிவரி வேகம்','std':'சாதாரண','se':'3–5 நாட்கள்','exp':'எக்ஸ்பிரஸ்','ee':'1–2 நாட்கள்','same':'அதே நாள்','sme':'இன்று','pk-t':'எவ்வாறு சேகரிப்போம்?','pk-s':'வீட்டிலிருந்து அல்லது ஹப்பில்.','hp':'வீட்டு பிக்அப்','hd':'+₹40 கட்டணம்.','dp':'சுய கைவிடல்','dd':'இலவசம்.','pt':'பிக்அப் நேரம்','mor':'காலை','aft':'மதியம்','eve':'மாலை','pd':'தேதி','nh':'ஹப்','hh':'திங்கள்–சனி, 9–7','si':'சிறப்பு குறிப்பு','rv-t':'மதிப்பாய்வு','rv-s':'உறுதிப்படுத்தல்.','pm':'பணம்','pn':'இப்போது','pc':'பிக்அப்பில் நகதி','pa':'முகவர்','cf':'✦  உறுதிப்படுத்துக','back':'← பின்','cont':'தொடர →','rev':'ஆர்டர் →','ed':'← திருத்து','st':'அனைத்தும் தயார்!','ss2':'SMS வரும்.','tn':'ட்ரேக்கிங்','bc':'உறுதி · காத்திருக்கிறது','ba':'மற்றொன்று','os':'சுருக்கம்','ul':'புதுப்பிக்கப்படும்','fr':'இருந்து','to2':'க்கு','co':'உள்ளடக்கம்','we':'எடை','sp':'வேகம்','cl':'சேகரிப்பு','ep':'மதிப்பிட்ட விலை','fw':'எடை நிரப்பு','fg':'சரக்கு','pf':'பிக்அப் கட்டணம்','gs':'GST','tot':'மொத்தம்','ft':'ட்ரேக்கிங் இலவசம்','ne':'இல்லை'},
+bn:{tag:'কুরিয়ার বুকিং',h1:'যেকোনো জায়গায়,',h1b:'সহজেই।',sub:'বিস্তারিত লিখুন এবং দাম জানুন।',s1:'রুট',s2:'পার্সেল',s3:'পিকআপ',s4:'পর্যালোচনা','r-t':'কোথা থেকে ও কোথায়?','r-s':'পিকআপ ও ডেলিভারি ঠিকানা লিখুন।','FROM':'থেকে','TO':'কাছে','Name':'নাম','Phone':'ফোন','City':'শহর','Pincode':'পিনকোড','Addr':'ডেলিভারি ঠিকানা','sc':'শহর বেছে নিন','p-t':'কী পাঠাচ্ছেন?','p-s':'সঠিক তথ্য সঠিক মূল্য নিশ্চিত করে।','Contents':'বিষয়বস্তু','wt':'ওজন (kg)','len':'দৈর্ঘ্য (cm)','wid':'প্রস্থ (cm)','ht':'উচ্চতা (cm)','val':'মূল্য (₹)','speed':'ডেলিভারি গতি','std':'সাধারণ','se':'3–5 দিন','exp':'এক্সপ্রেস','ee':'1–2 দিন','same':'একই দিন','sme':'আজ','pk-t':'কীভাবে নেব?','pk-s':'দরজা থেকে বা হাবে দিন।','hp':'হোম পিকআপ','hd':'+₹40 চার্জ।','dp':'নিজে দিন','dd':'হাবে বিনামূল্যে।','pt':'পিকআপ সময়','mor':'সকাল','aft':'দুপুর','eve':'বিকাল','pd':'তারিখ','nh':'হাব','hh':'সোম–শনি, 9–7','si':'বিশেষ নির্দেশনা','rv-t':'পর্যালোচনা','rv-s':'নিশ্চিতের আগে দেখুন।','pm':'পেমেন্ট','pn':'এখনই','pc':'নগদ','pa':'এজেন্ট','cf':'✦  নিশ্চিত করুন','back':'← পিছনে','cont':'চালিয়ে যান →','rev':'অর্ডার →','ed':'← পরিবর্তন','st':'সব ঠিক!','ss2':'SMS আসবে।','tn':'ট্র্যাকিং','bc':'নিশ্চিত · অপেক্ষায়','ba':'আরেকটি','os':'সারসংক্ষেপ','ul':'আপডেট হয়','fr':'থেকে','to2':'কাছে','co':'বিষয়বস্তু','we':'ওজন','sp':'গতি','cl':'সংগ্রহ','ep':'আনুমানিক','fw':'ওজন দিন','fg':'মাল','pf':'পিকআপ ফি','gs':'GST','tot':'মোট','ft':'ট্র্যাকিং বিনামূল্যে','ne':'খালি'},
+te:{tag:'కొరియర్ బుకింగ్',h1:'ఎక్కడికైనా పంపండి,',h1b:'సులభంగా.',sub:'వివరాలు నింపి ధర తెలుసుకోండి.',s1:'మార్గం',s2:'పార్సల్',s3:'పికప్',s4:'సమీక్ష','r-t':'ఎక్కడ నుండి & ఎక్కడికి?','r-s':'పికప్ మరియు డెలివరీ చిరునామా నమోదు చేయండి.','FROM':'నుండి','TO':'కు','Name':'పేరు','Phone':'ఫోన్','City':'నగరం','Pincode':'పిన్‌కోడ్','Addr':'డెలివరీ చిరునామా','sc':'నగరం ఎంచుకోండి','p-t':'ఏమి పంపుతున్నారు?','p-s':'ఖచ్చితమైన వివరాలు సరైన ధర ఇస్తాయి.','Contents':'కంటెంట్స్','wt':'బరువు (kg)','len':'పొడవు (cm)','wid':'వెడల్పు (cm)','ht':'ఎత్తు (cm)','val':'విలువ (₹)','speed':'వేగం','std':'సాధారణ','se':'3–5 రోజులు','exp':'ఎక్స్‌ప్రెస్','ee':'1–2 రోజులు','same':'అదే రోజు','sme':'నేడు','pk-t':'ఎలా సేకరిస్తాం?','pk-s':'తలుపు లేదా హబ్.','hp':'హోమ్ పికప్','hd':'+₹40 చార్జి.','dp':'స్వయంగా','dd':'హబ్‌లో. ఉచితం.','pt':'పికప్ సమయం','mor':'ఉదయం','aft':'మధ్యాహ్నం','eve':'సాయంత్రం','pd':'తేదీ','nh':'హబ్','hh':'సోమ–శని, 9–7','si':'ప్రత్యేక సూచనలు','rv-t':'సమీక్ష','rv-s':'నిర్ధారణ ముందు తనిఖీ చేయండి.','pm':'చెల్లింపు','pn':'ఇప్పుడు','pc':'నగదు','pa':'ఏజెంట్','cf':'✦  నిర్ధారించండి','back':'← వెనక్కి','cont':'కొనసాగించు →','rev':'ఆర్డర్ →','ed':'← మార్చు','st':'అంతా సిద్ధం!','ss2':'SMS వస్తుంది.','tn':'ట్రాకింగ్','bc':'నిర్ధారణ · వేచి','ba':'మరో పార్సల్','os':'సారాంశం','ul':'అప్‌డేట్ అవుతుంది','fr':'నుండి','to2':'కు','co':'కంటెంట్స్','we':'బరువు','sp':'వేగం','cl':'సేకరణ','ep':'అంచనా ధర','fw':'బరువు నింపు','fg':'సరుకు','pf':'పికప్ ఫీ','gs':'GST','tot':'మొత్తం','ft':'ట్రాకింగ్ ఉచితం','ne':'ఖాళీ'},
+mr:{tag:'कुरिअर बुकिंग',h1:'कुठेही पाठवा,',h1b:'सहजपणे.',sub:'खाली माहिती भरा आणि किंमत जाणा.',s1:'मार्ग',s2:'पार्सल',s3:'पिकअप',s4:'आढावा','r-t':'कोठून आणि कोठे?','r-s':'पिकअप आणि डिलिव्हरी पत्ता प्रविष्ट करा.','FROM':'कोठून','TO':'कोठे','Name':'नाव','Phone':'फोन','City':'शहर','Pincode':'पिनकोड','Addr':'डिलिव्हरी पत्ता','sc':'शहर निवडा','p-t':'तुम्ही काय पाठवत आहात?','p-s':'अचूक माहितीमुळे योग्य किंमत.','Contents':'आशय','wt':'वजन (kg)','len':'लांबी (cm)','wid':'रुंदी (cm)','ht':'उंची (cm)','val':'मूल्य (₹)','speed':'डिलिव्हरी गती','std':'सामान्य','se':'3–5 दिवस','exp':'एक्स्प्रेस','ee':'1–2 दिवस','same':'त्याच दिवशी','sme':'आज','pk-t':'आम्ही ते कसे घ्यायचे?','pk-s':'दरवाज्यातून किंवा हबवर.','hp':'होम पिकअप','hd':'+₹40 शुल्क.','dp':'स्वतः सोडा','dd':'मोफत.','pt':'पिकअप वेळ','mor':'सकाळ','aft':'दुपार','eve':'संध्याकाळ','pd':'तारीख','nh':'हब','hh':'सोम–शनि, 9–7','si':'विशेष सूचना','rv-t':'आढावा','rv-s':'बुकिंगपूर्वी तपासा.','pm':'देयक','pn':'आता','pc':'रोख','pa':'एजंट','cf':'✦  निश्चित करा','back':'← मागे','cont':'पुढे →','rev':'ऑर्डर →','ed':'← संपादित','st':'सर्व तयार!','ss2':'SMS येईल.','tn':'ट्रॅकिंग','bc':'पुष्टी · प्रतीक्षा','ba':'आणखी एक','os':'सारांश','ul':'भरताना अपडेट','fr':'कोठून','to2':'कोठे','co':'आशय','we':'वजन','sp':'गती','cl':'संग्रह','ep':'अंदाजे किंमत','fw':'वजन भरा','fg':'माल वाहतूक','pf':'पिकअप शुल्क','gs':'GST','tot':'एकूण','ft':'ट्रॅकिंग मोफत','ne':'प्रविष्ट नाही'},
+};
+
+// ── STATE ───────────────────────────────────────────
+let step=0,sDel='standard',sPkup='home',sSlt='Morning',lang='en';
+const dM={standard:1,express:1.8,sameday:3};
+const dL={standard:'Standard (3–5 days)',express:'Express (1–2 days)',sameday:'Same Day'};
+
+// ── LANGUAGE ────────────────────────────────────────
+function toggleLang(e){e.stopPropagation();const d=document.getElementById('ldrop'),b=document.getElementById('lbtn');d.classList.toggle('show');b.classList.toggle('open');}
+document.addEventListener('click',()=>{document.getElementById('ldrop').classList.remove('show');document.getElementById('lbtn').classList.remove('open');});
+function setLang(code,flag,short,el){
+  lang=code;
+  document.getElementById('lfl').textContent=flag;
+  document.getElementById('lnm').textContent=short;
+  document.getElementById('ldrop').classList.remove('show');
+  document.getElementById('lbtn').classList.remove('open');
+  document.querySelectorAll('.lang-opt').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');
+  applyLang();
+}
+function applyLang(){
+  const t=T[lang]||T.en;
+  document.querySelectorAll('[data-t]').forEach(el=>{const k=el.getAttribute('data-t');if(t[k]!==undefined)el.textContent=t[k];});
+  document.getElementById('s-spd').textContent=dL[sDel];
+}
+
+// ── THEME ───────────────────────────────────────────
+document.getElementById('tBtn').onclick=()=>{const dark=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',dark?'light':'dark');document.getElementById('tIco').textContent=dark?'☽':'☀';};
+
+// ── STEPS ───────────────────────────────────────────
+function goStep(n){if(n>step)return;step=n;render();}
+function nextStep(){if(step<3){step++;render();}}
+function prevStep(){if(step>0){step--;render();}}
+function render(){
+  document.querySelectorAll('.sec').forEach((s,i)=>s.classList.toggle('active',i===step));
+  document.querySelectorAll('.step').forEach((t,i)=>{
+    t.classList.remove('active','done');
+    const n=t.querySelector('.sn');
+    if(i<step){t.classList.add('done');n.textContent='✓';}
+    else if(i===step){t.classList.add('active');n.textContent=i+1;}
+    else n.textContent=i+1;
+  });
+  document.getElementById('pf').style.width=[25,50,75,100][step]+'%';
+  if(step===3)buildReview();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── SELECTORS ───────────────────────────────────────
+function selDel(el,type){document.querySelectorAll('.d-card').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');sDel=type;document.getElementById('s-spd').textContent=dL[type];calcP();}
+function selPkup(el,type){document.querySelectorAll('.p-card').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');sPkup=type;document.getElementById('s-pk').textContent=type==='home'?'Home Pickup':'Self Drop-off';document.getElementById('slotSec').style.display=type==='home'?'block':'none';document.getElementById('dropSec').style.display=type==='drop'?'block':'none';calcP();}
+function selSlt(el,lbl){document.querySelectorAll('.slot').forEach(s=>s.classList.remove('sel'));el.classList.add('sel');sSlt=lbl;}
+function selPay(i){document.querySelectorAll('.pay-card').forEach(c=>c.classList.remove('sel'));document.getElementById('pay'+(i+1)).classList.add('sel');}
+
+// ── PRICE ───────────────────────────────────────────
+function calcP(){
+  const w=parseFloat(document.getElementById('wt').value)||0;
+  const l=parseFloat(document.getElementById('len').value)||0;
+  const wd=parseFloat(document.getElementById('wid').value)||0;
+  const h=parseFloat(document.getElementById('ht').value)||0;
+  const vol=(l*wd*h)/5000,chg=Math.max(w,vol);
+  const base=chg>0?60+chg*40:0;
+  const fr=Math.round(base*dM[sDel]);
+  const pk=sPkup==='home'?40:0;
+  const gst=Math.round((fr+pk)*0.18);
+  const tot=fr+pk+gst;
+  document.getElementById('pb-fr').textContent=fr>0?'₹'+fr:'₹—';
+  document.getElementById('pb-pk').textContent=pk>0?'₹'+pk:'Free';
+  document.getElementById('pb-gst').textContent=gst>0?'₹'+gst:'₹—';
+  document.getElementById('pb-tot').textContent=tot>0?'₹'+tot:'₹—';
+  document.getElementById('s-price').innerHTML=tot>0?'₹'+tot+'<span>estimated</span>':'₹—<span>fill weight</span>';
+  document.getElementById('s-wt').innerHTML=chg>0?chg.toFixed(1)+' kg':'<em style="color:var(--tx3);font-style:italic">—</em>';
+}
+
+// ── SUMMARY ─────────────────────────────────────────
+function upS(){
+  const oC=document.getElementById('oCity').value,oP=document.getElementById('oPin').value;
+  const dC=document.getElementById('dCity').value,dP=document.getElementById('dPin').value;
+  const cnt=document.getElementById('contents').value;
+  document.getElementById('s-from').innerHTML=(oC||oP)?`${oC}${oP?' – '+oP:''}`:'<em style="color:var(--tx3);font-style:italic;font-weight:300">Not entered</em>';
+  document.getElementById('s-to').innerHTML=(dC||dP)?`${dC}${dP?' – '+dP:''}`:'<em style="color:var(--tx3);font-style:italic;font-weight:300">Not entered</em>';
+  document.getElementById('s-cnt').innerHTML=cnt||'<em style="color:var(--tx3);font-style:italic;font-weight:300">—</em>';
+  calcP();
+}
+
+// ── REVIEW ──────────────────────────────────────────
+function buildReview(){
+  const rows=[['From',`${document.getElementById('oCity').value||'—'}, ${document.getElementById('oPin').value||'—'}`],['Sender',`${document.getElementById('sName').value||'—'} · ${document.getElementById('sPhone').value||'—'}`],['To',`${document.getElementById('dCity').value||'—'}, ${document.getElementById('dPin').value||'—'}`],['Recipient',`${document.getElementById('rName').value||'—'} · ${document.getElementById('rPhone').value||'—'}`],['Address',document.getElementById('dAddr').value||'—'],['Contents',document.getElementById('contents').value||'—'],['Speed',dL[sDel]],['Collection',sPkup==='home'?`Home Pickup · ${sSlt}`:'Self Drop-off'],['Total',document.getElementById('pb-tot').textContent]];
+  document.getElementById('revContent').innerHTML=`<div style="background:var(--sf2);border-radius:10px;padding:4px 12px 8px;margin-bottom:14px;border:1px solid var(--bd)">${rows.map(([k,v])=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--bd);gap:12px"><span style="font-size:11px;color:var(--tx3);flex-shrink:0">${k}</span><span style="font-size:11px;color:var(--tx);font-weight:500;text-align:right;word-break:break-word">${v}</span></div>`).join('')}</div>`;
+}
+
+// ── CONFIRM ─────────────────────────────────────────
+function confirmBooking(){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.getElementById('stepsBar').style.display='none';
+  document.querySelector('.prog').style.display='none';
+  document.getElementById('trackNum').textContent='SWF-'+Math.floor(100000+Math.random()*900000);
+  document.getElementById('sucView').classList.add('active');
+  document.querySelector('.card').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function resetForm(){
+  document.getElementById('sucView').classList.remove('active');
+  document.getElementById('stepsBar').style.display='flex';
+  document.querySelector('.prog').style.display='block';
+  step=0;render();sDel='standard';sPkup='home';
+  document.querySelectorAll('input[type="text"],input[type="tel"],input[type="number"],input[type="date"]').forEach(i=>i.value='');
+  document.querySelectorAll('select').forEach(s=>s.selectedIndex=0);
+  upS();
+}
+
+// ── INIT ────────────────────────────────────────────
+document.getElementById('pkDate').value=new Date().toISOString().split('T')[0];
+upS();
+</script>
+</body>
+</html>
