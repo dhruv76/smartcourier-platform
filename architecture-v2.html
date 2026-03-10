@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartCourier AI — Full System Architecture v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07090f;
+    --panel: #0e1118;
+    --border: #1e2535;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --green: #22d3a8;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --card: #111827;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  header {
+    position: relative; z-index: 10;
+    padding: 24px 40px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-text { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .version-badge { font-family: 'Space Mono', monospace; font-size: 10px; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--green); color: var(--green); letter-spacing: 1px; }
+
+  .tabs { display: flex; gap: 6px; padding: 16px 40px; overflow-x: auto; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(7,9,15,0.95); backdrop-filter: blur(10px); z-index: 20; }
+  .tab { font-family: 'Space Mono', monospace; font-size: 10px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px; white-space: nowrap; }
+  .tab:hover { border-color: var(--accent); color: var(--accent); }
+  .tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+  .main { position: relative; z-index: 5; padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+  .arch-view { display: none; }
+  .arch-view.active { display: block; }
+
+  /* Flow diagram */
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow-row { display: flex; align-items: stretch; gap: 0; }
+  .flow-node {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; flex: 1; cursor: pointer; transition: all 0.2s; position: relative; margin: 4px;
+  }
+  .flow-node:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,229,255,0.1); }
+  .flow-node.selected { border-color: var(--accent); background: rgba(0,229,255,0.05); }
+  .flow-node-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .flow-node-sub { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); line-height: 1.5; }
+  .flow-arrow { display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--muted); padding: 0 4px; flex: 0 0 24px; }
+  .flow-conn { display: flex; align-items: center; justify-content: center; padding: 4px 0; color: var(--muted); font-size: 14px; }
+
+  .node-badge { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; }
+  .nb-core { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .nb-ai { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .nb-gap { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .nb-new { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+
+  /* Detail drawer */
+  .drawer { background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; padding: 24px; margin-top: 20px; display: none; animation: slideIn 0.25s ease; }
+  .drawer.show { display: block; }
+  @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .drawer-title { font-size: 18px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+  .drawer-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 16px; }
+  .drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .drawer-section { }
+  .drawer-section-title { font-size: 11px; font-weight: 700; color: var(--accent3); letter-spacing: 1px; margin-bottom: 8px; font-family: 'Space Mono', monospace; }
+  .drawer-list { list-style: none; }
+  .drawer-list li { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); padding: 4px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
+  .drawer-list li::before { content: "→ "; color: var(--accent); }
+
+  /* Module cards */
+  .module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+  .module-card { background: var(--panel); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); transition: all 0.2s; }
+  .module-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+  .module-header { padding: 20px; display: flex; gap: 12px; align-items: flex-start; }
+  .module-num { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+  .module-info { flex: 1; }
+  .module-title { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+  .module-desc { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); line-height: 1.6; }
+  .module-body { padding: 0 20px 20px; }
+  .module-flows { display: flex; flex-direction: column; gap: 6px; }
+  .flow-step { background: var(--card); border-radius: 6px; padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; }
+  .step-num { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--accent); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .step-text { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); line-height: 1.5; }
+  .module-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 16px 20px 0; border-top: 1px solid var(--border); margin-top: 4px; }
+  .tag { font-family: 'Space Mono', monospace; font-size: 9px; padding: 3px 8px; border-radius: 4px; border: 1px solid; }
+
+  /* AI error map */
+  .error-map { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .error-row { background: var(--panel); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
+  .error-row-header { display: grid; grid-template-columns: 220px 1fr 1fr; gap: 0; }
+  .error-cell { padding: 12px 16px; font-size: 11px; border-right: 1px solid var(--border); }
+  .error-cell:last-child { border-right: none; }
+  .error-cell .label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.5px; }
+  .error-cell .value { font-size: 12px; font-weight: 600; }
+
+  /* Status pills */
+  .pill { display: inline-block; font-family: 'Space Mono', monospace; font-size: 9px; padding: 2px 8px; border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; }
+  .pill-red { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .pill-green { background: rgba(34,211,168,0.15); color: var(--green); border: 1px solid rgba(34,211,168,0.3); }
+  .pill-blue { background: rgba(0,229,255,0.15); color: var(--accent); border: 1px solid rgba(0,229,255,0.3); }
+  .pill-yellow { background: rgba(245,158,11,0.15); color: var(--accent3); border: 1px solid rgba(245,158,11,0.3); }
+  .pill-purple { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-family: 'Space Mono', monospace; font-size: 10px; }
+  .data-table th { background: rgba(0,229,255,0.08); color: var(--accent); font-size: 9px; letter-spacing: 1px; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* RTO flow viz */
+  .rto-flow { display: flex; overflow-x: auto; gap: 0; padding-bottom: 12px; }
+  .rto-node { flex: 0 0 130px; text-align: center; }
+  .rto-circle { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; margin: 0 auto 8px; border: 2px solid var(--border); background: var(--panel); }
+  .rto-label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); line-height: 1.4; }
+  .rto-arrow { flex: 0 0 20px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
+
+  /* SLA gauge */
+  .sla-levels { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .sla-level { display: flex; align-items: center; gap: 12px; }
+  .sla-bar-wrap { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .sla-bar { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .sla-pct { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); width: 40px; text-align: right; }
+  .sla-label { font-family: 'Space Mono', monospace; font-size: 10px; width: 80px; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  @media (max-width: 700px) { header, .main { padding: 16px 20px; } .drawer-grid { grid-template-columns: 1fr; } .error-row-header { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    <div>
+      <div class="logo-text">SmartCourier AI</div>
+      <div class="logo-sub">FULL ARCHITECTURE · ALL MODULES</div>
+    </div>
+  </div>
+  <span class="version-badge">v2.0 — COMPLETE</span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">🏗 System Overview</div>
+  <div class="tab" onclick="switchTab('returns')">↩ Returns & RTO</div>
+  <div class="tab" onclick="switchTab('payments')">💳 Payments & COD</div>
+  <div class="tab" onclick="switchTab('sla')">⏱ SLA Management</div>
+  <div class="tab" onclick="switchTab('partners')">🔗 3PL Partners</div>
+  <div class="tab" onclick="switchTab('ai')">🤖 AI Error Prevention</div>
+</div>
+
+<div class="main">
+
+<!-- ========== OVERVIEW ========== -->
+<div id="tab-overview" class="arch-view active">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Core (v1 brief)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div> New — Added Now</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> AI-Powered</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a78bfa)"></div> Phase 2</div>
+  </div>
+
+  <div class="module-grid">
+
+    <div class="module-card" style="border-color:rgba(34,211,168,0.3)">
+      <div class="module-header">
+        <div class="module-num" style="background:rgba(34,211,168,0.15);color:var(--green)">01</div>
+        <div class="module-info">
+          <div class="module-title">Booking & Lifecycle Engine</div>
+          <div class="module-desc">D2C web portal · B2B bulk scan · 8-stage parcel lifecycle · UUID + tracking gen</div>
+        </div>
+      </div>
+      <div class="module-body">
+        <div class="module-flows">
+          <div class="flow-step"><span class="step-num">FLOW</span><span class="step-text">Rate check → Chargeable weight calc → Pickup/drop selection → Payment → UUID + tracking number generated</span></div>
+          <div class="flow-step"><span class="step-num">B2B</span><span class="step-text">Agent photo → AI parcel scan → ref_document_id generation → bulk manifest creation</span></div>
+        </div>
+      </div>
+      <div class="module-tags">
+        <span class="tag" style="border-color:var(--green);color:var(--green)">CORE</span>
+        <span class="tag" style="border-color:var(--accent);color:var(--accent)">AI SCAN</span>
+        <span class="tag" style="border-color:var(--muted);color:var(--muted)">200ms SLA</span>
+      </div>
+    </div>
+
+    <div class="module-card" style="border-color:rgba(34,211,168,0.3)">
+      <div class="module-header">
+        <div class="module-num" style="background:rgba(34,211,168,0.15);color:var(--green)">02</div>
+        <div class="module-info">
+          <div class="module-title">Hub Operations & Dispatch</div>
+          <div class="module-desc">Scan → label print → AI sort → driver assignment → geo-fencing auto-status</div>
+        </div>
+      </div>
+      <div class="module-body">
+        <div class="module-flows">
+          <div class="flow-step"><span class="step-num">HUB</span><span class="step-text">Scan ref_id → validate → print QR + barcode label → sort to vehicle bay</span></div>
+          <div class="flow-step"><span class="step-num">GEO</span><span class="step-text">Driver leaves pickup zone → PICKED_UP auto-triggered via geo-fence polygon</span></div>
+        </div>
+      </div>
+      <div class="module-tags">
+        <span class="tag" style="border-color:var(--green);color:var(--green)">CORE</span>
+        <span class="tag" style="border-color:var(--accent);color:var(--accent)">GEO-FENCING</span>
+      </div>
+    </div>
+
+    <div class="module-card" style="border-color:rgba(245,158,11,0.4)">
+      <div class="module-header">
+        <div class="module-num" style="background:rgba(245,158,11,0.15);color:var(--accent3)">03</div>
+        <div class="module-info">
+          <div class="module-title">Returns & RTO ✦ NEW</div>
+          <div class="module-desc">Failed delivery → auto RTO → reverse tracking → seller notification → refund trigger</div>
+        </div>
+      </div>
+      <div class="module-body">
+        <div class="module-flows">
+          <div class="flow-step"><span class="step-num">TRIGGER</span><span class="step-text">3 failed attempts → RETURN_INITIATED → reverse assignment created → reverse tracking number</span></div>
+          <div class="flow-step"><span class="step-num">END</span><span class="step-text">RETURN_DELIVERED → auto-refund to seller wallet → inventory update in B2B portal</span></div>
+        </div>
+      </div>
+      <div class="module-tags">
+        <span class="tag" style="border-color:var(--accent3);color:var(--accent3)">NEW MODULE</span>
+        <span class="tag" style="border-color:var(--red);color:var(--red)">WAS MISSING</span>
+      </div>
+    </div>
+
+    <div class="module-card" style="border-color:rgba(245,158,11,0.4)">
+      <div class="module-header">
+        <div class="module-num" style="background:rgba(245,158,11,0.15);color:var(--accent3)">04</div>
+        <div class="module-info">
+          <div class="module-title">Payment & Billing ✦ NEW</div>
+          <div class="module-desc">Prepaid · COD collection · B2B invoicing · reconciliation · remittance engine</div>
+        </div>
+      </div>
+      <div class="module-body">
+        <div class="module-flows">
+          <div class="flow-step"><span class="step-num">COD</span><span class="step-text">Driver collects cash → AI validates amount → hub handover → T+2 remittance to seller</span></div>
+          <div class="flow-step"><span class="step-num">B2B</span><span class="step-text">Monthly shipment aggregation → line items → discrepancy check → invoice generation → delivery</span></div>
+        </div>
+      </div>
+      <div class="module-tags">
+        <span class="tag" style="border-color:var(--accent3);color:var(--accent3)">NEW MODULE</span>
+        <span class="tag" style="border-color:var(--red);color:var(--red)">WAS MISSING</span>
+      </div>
+    </div>
+
+    <div class="module-card" style="border-color:rgba(245,158,11,0.4)">
+      <div class="module-header">
+        <div class="module-num" style="background:rgba(245,158,11,0.15);color:var(--accent3)">05</div>
+        <div class="module-info">
+          <div class="module-title">SLA & Breach Management ✦ NEW</div>
+          <div class="module-desc">Per-route SLA timers · 70/90/100% alert thresholds · auto-escalation · compensation</div>
+        </div>
+      </div>
+      <div class="module-body">
+        <div class="module-flows">
+          <div class="flow-step"><span class="step-num">MONITOR</span><span class="step-text">Background job scans all active shipments every 15 min for breach risk</span></div>
+          <div class="flow-step"><span class="step-num">ACTION</span><span class="step-text">Breach detected → auto-escalate to ops head → client notification → credit note issued</span></div>
+        </div>
+      </div>
+      <div class="module-tags">
+        <span class="tag" style="border-color:var(--accent3);color:var(--accent3)">NEW MODULE</span>
+        <span class="tag" style="border-color:var(--red);color:var(--red)">WAS MISSING</span>
+      </div>
+    </div>
+
+    <div class="module-card" style="border-color:rgba(245,158,11,0.4)">
+      <div class="module-header">
+        <div class="module-num" style="background:rgba(245,158,11,0.15);color:var(--accent3)">06</div>
+        <div class="module-info">
+          <div class="module-title">3PL Partner Integration ✦ NEW</div>
+          <div class="module-desc">Unified adapter pattern · Shadowfax · Dunzo · BigBasket · AI partner scoring</div>
+        </div>
+      </div>
+      <div class="module-body">
+        <div class="module-flows">
+          <div class="flow-step"><span class="step-num">ASSIGN</span><span class="step-text">AI scores all available partners on ETA + cost + reliability → auto-assigns best partner</span></div>
+          <div class="flow-step"><span class="step-num">WEBHOOK</span><span class="step-text">Partner status events normalized → internal Kafka events → core tracking updated</span></div>
+        </div>
+      </div>
+      <div class="module-tags">
+        <span class="tag" style="border-color:var(--accent3);color:var(--accent3)">NEW MODULE</span>
+        <span class="tag" style="border-color:var(--accent);color:var(--accent)">AI SCORING</span>
+      </div>
+    </div>
+
+    <div class="module-card" style="border-color:rgba(0,229,255,0.3)">
+      <div class="module-header">
+        <div class="module-num" style="background:rgba(0,229,255,0.1);color:var(--accent)">07</div>
+        <div class="module-info">
+          <div class="module-title">AI Error Prevention Layer ⭐ TOP PRIORITY</div>
+          <div class="module-desc">8 validation rules · CV parcel scanner · GPS delivery verify · COD fraud prevention</div>
+        </div>
+      </div>
+      <div class="module-body">
+        <div class="module-flows">
+          <div class="flow-step"><span class="step-num">VALIDATE</span><span class="step-text">Every data entry event passes through rule engine: duplicate check · pincode validate · weight mismatch · GPS verify</span></div>
+          <div class="flow-step"><span class="step-num">VISION</span><span class="step-text">YOLOv8 + OCR pipeline: detect parcels, read labels, flag damage, count vs manifest</span></div>
+        </div>
+      </div>
+      <div class="module-tags">
+        <span class="tag" style="border-color:var(--accent);color:var(--accent)">AI-FIRST</span>
+        <span class="tag" style="border-color:#f59e0b;color:#f59e0b)">ALL PHASES</span>
+        <span class="tag" style="border-color:var(--green);color:var(--green)">LAUNCH BLOCKER</span>
+      </div>
+    </div>
+
+    <div class="module-card" style="border-color:rgba(34,211,168,0.3)">
+      <div class="module-header">
+        <div class="module-num" style="background:rgba(34,211,168,0.15);color:var(--green)">08</div>
+        <div class="module-info">
+          <div class="module-title">Real-Time Tracking & Notifications</div>
+          <div class="module-desc">WebSocket live tracking · SMS/WhatsApp/Email · Kafka-driven event pipeline</div>
+        </div>
+      </div>
+      <div class="module-body">
+        <div class="module-flows">
+          <div class="flow-step"><span class="step-num">TRACK</span><span class="step-text">Driver GPS every 30s → Kafka → WebSocket → customer tracking page updates live</span></div>
+          <div class="flow-step"><span class="step-num">NOTIFY</span><span class="step-text">Every status change → event-driven notification → SMS (Twilio) + WhatsApp (Meta BSP)</span></div>
+        </div>
+      </div>
+      <div class="module-tags">
+        <span class="tag" style="border-color:var(--green);color:var(--green)">CORE</span>
+        <span class="tag" style="border-color:var(--muted);color:var(--muted)">100ms SLA</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== RETURNS ========== -->
+<div id="tab-returns" class="arch-view">
+  <h2 style="font-size:22px;font-weight:800;color:var(--accent3);margin-bottom:8px;">Returns & Reverse Logistics (RTO)</h2>
+  <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:24px;">15-30% of Indian e-commerce parcels are returned. This flow was entirely missing from the original brief.</p>
+
+  <div style="margin-bottom:24px;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">RTO JOURNEY — click any stage</div>
+    <div class="rto-flow">
+      <div class="rto-node"><div class="rto-circle" style="border-color:var(--red);cursor:pointer" onclick="showRto(0)">❌</div><div class="rto-label">DELIVERY<br>FAILED</div></div>
+      <div class="rto-arrow">→</div>
+      <div class="rto-node"><div class="rto-circle" style="border-color:var(--accent3);cursor:pointer" onclick="showRto(1)">🔄</div><div class="rto-label">RETURN<br>INITIATED</div></div>
+      <div class="rto-arrow">→</div>
+      <div class="rto-node"><div class="rto-circle" style="border-color:var(--accent);cursor:pointer" onclick="showRto(2)">🛵</div><div class="rto-label">RETURN<br>PICKUP</div></div>
+      <div class="rto-arrow">→</div>
+      <div class="rto-node"><div class="rto-circle" style="border-color:var(--accent);cursor:pointer" onclick="showRto(3)">🚚</div><div class="rto-label">RETURN IN<br>TRANSIT</div></div>
+      <div class="rto-arrow">→</div>
+      <div class="rto-node"><div class="rto-circle" style="border-color:var(--accent);cursor:pointer" onclick="showRto(4)">🏭</div><div class="rto-label">AT ORIGIN<br>HUB</div></div>
+      <div class="rto-arrow">→</div>
+      <div class="rto-node"><div class="rto-circle" style="border-color:var(--green);cursor:pointer" onclick="showRto(5)">✅</div><div class="rto-label">RETURN<br>DELIVERED</div></div>
+    </div>
+    <div id="rto-detail" class="drawer"></div>
+  </div>
+
+  <div style="margin-bottom:24px;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">TRIGGER CONDITIONS</div>
+    <table class="data-table" style="background:var(--panel);border-radius:10px;overflow:hidden;">
+      <thead><tr><th>Trigger</th><th>System Action</th><th>SLA</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>3 failed delivery attempts</td><td>Auto-initiate RTO, notify seller immediately</td><td>Within 24h of 3rd attempt</td><td><span class="pill pill-red">AUTO</span></td></tr>
+        <tr><td>Customer refuses delivery</td><td>Driver marks REFUSED in app → RTO immediate</td><td>Immediate</td><td><span class="pill pill-red">AUTO</span></td></tr>
+        <tr><td>Address not found</td><td>Escalate to hub manager, attempt contact</td><td>48h then auto-RTO</td><td><span class="pill pill-yellow">SEMI-AUTO</span></td></tr>
+        <tr><td>Seller-initiated return</td><td>Customer schedules reverse pickup via portal</td><td>Slot-based</td><td><span class="pill pill-blue">MANUAL</span></td></tr>
+        <tr><td>Damaged (AI flagged)</td><td>Hold at hub, raise claim, await decision</td><td>72h decision window</td><td><span class="pill pill-yellow">SEMI-AUTO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="background:rgba(34,211,168,0.06);border:1px solid rgba(34,211,168,0.2);border-radius:10px;padding:16px;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--green);margin-bottom:8px;letter-spacing:1px;">✅ AUTO-TRIGGER: When return_status = RETURN_DELIVERED</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8">
+      → COD refund event fired to Payment Service (if COD shipment)<br>
+      → Seller B2B portal inventory updated<br>
+      → Return charge added to next invoice<br>
+      → All without any human intervention
+    </div>
+  </div>
+</div>
+
+<!-- ========== PAYMENTS ========== -->
+<div id="tab-payments" class="arch-view">
+  <h2 style="font-size:22px;font-weight:800;color:var(--accent3);margin-bottom:8px;">Payment & Billing Engine</h2>
+  <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:24px;">COD = 60-70% of Indian logistics volume. This entire module was absent from the original brief.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:24px;">
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;">PREPAID ONLINE</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7">Razorpay / Stripe<br>Collected at booking<br>D2C individual customers<br>Instant confirmation</div>
+    </div>
+    <div style="background:var(--panel);border:1px solid var(--accent3);border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent3);margin-bottom:8px;">COD ⭐ MOST COMPLEX</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7">Driver collects cash<br>Hub handover verification<br>T+2 seller remittance<br>AI fraud detection</div>
+    </div>
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:8px;">B2B CREDIT</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7">Monthly invoicing<br>Net-30 / Net-45 terms<br>AI reconciliation engine<br>PDF + portal + email</div>
+    </div>
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:8px;">WALLET PREPAID</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7">High-volume B2B clients<br>Bank transfer top-up<br>Per-shipment deduction<br>Low-balance alerts</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:24px;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">COD COLLECTION FLOW — STEP BY STEP</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="flow-step" style="background:var(--panel);border-radius:8px;padding:12px 16px;display:flex;gap:12px;">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;flex-shrink:0">01</span>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">Driver opens app → parcel details shown with COD amount (pre-filled, non-editable)</span>
+      </div>
+      <div class="flow-step" style="background:var(--panel);border-radius:8px;padding:12px 16px;display:flex;gap:12px;">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;flex-shrink:0">02</span>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">Driver collects exact cash → OTP verification → photo proof → GPS stamp at delivery address</span>
+      </div>
+      <div class="flow-step" style="background:var(--panel);border-radius:8px;padding:12px 16px;display:flex;gap:12px;">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;flex-shrink:0">03</span>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">End of day: driver submits cash at hub → Hub Manager physically counts → AI compares vs system total</span>
+      </div>
+      <div class="flow-step" style="background:var(--panel);border-radius:8px;padding:12px 16px;display:flex;gap:12px;">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;flex-shrink:0">04</span>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">Mismatch flagged → hub manager resolves → approved → remittance batch queued</span>
+      </div>
+      <div class="flow-step" style="background:rgba(34,211,168,0.05);border:1px solid rgba(34,211,168,0.2);border-radius:8px;padding:12px 16px;display:flex;gap:12px;">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--green);font-weight:700;flex-shrink:0">05</span>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">T+2 automated bank transfer to seller account → seller dashboard shows remittance confirmation</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SLA ========== -->
+<div id="tab-sla" class="arch-view">
+  <h2 style="font-size:22px;font-weight:800;color:#a78bfa;margin-bottom:8px;">SLA & Breach Management</h2>
+  <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:24px;">Without this module, delays go undetected until a customer complaint. With it, the system escalates proactively and auto-compensates.</p>
+
+  <div style="margin-bottom:24px;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">ALERT THRESHOLDS — LIVE SLA INDICATOR</div>
+    <div class="sla-levels">
+      <div class="sla-level">
+        <div class="sla-label"><span class="pill pill-green">GREEN</span></div>
+        <div class="sla-bar-wrap"><div class="sla-bar" style="width:60%;background:var(--green)"></div></div>
+        <div class="sla-pct">0–69%</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);width:160px">On track — no action</div>
+      </div>
+      <div class="sla-level">
+        <div class="sla-label"><span class="pill pill-yellow">YELLOW</span></div>
+        <div class="sla-bar-wrap"><div class="sla-bar" style="width:80%;background:var(--accent3)"></div></div>
+        <div class="sla-pct">70–89%</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);width:160px">Hub Manager alerted</div>
+      </div>
+      <div class="sla-level">
+        <div class="sla-label"><span class="pill pill-red">ORANGE</span></div>
+        <div class="sla-bar-wrap"><div class="sla-bar" style="width:93%;background:#f97316)"></div></div>
+        <div class="sla-pct">90–99%</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);width:160px">Regional Ops Head</div>
+      </div>
+      <div class="sla-level">
+        <div class="sla-label"><span class="pill pill-red">BREACH</span></div>
+        <div class="sla-bar-wrap"><div class="sla-bar" style="width:100%;background:var(--red)"></div></div>
+        <div class="sla-pct">100%+</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);width:160px">Client + auto-compensate</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:24px;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">SLA BY ROUTE TYPE</div>
+    <table class="data-table" style="background:var(--panel);border-radius:10px;overflow:hidden;">
+      <thead><tr><th>Route</th><th>Standard</th><th>Express</th><th>B2B</th><th>Breach Penalty</th></tr></thead>
+      <tbody>
+        <tr><td>Same city</td><td>24h</td><td>4h</td><td>12h</td><td>Credit note + ops alert</td></tr>
+        <tr><td>Metro → Metro</td><td>48h</td><td>24h</td><td>36h</td><td>Credit note + ops alert</td></tr>
+        <tr><td>Metro → Tier-2</td><td>72h</td><td>48h</td><td>60h</td><td>Credit note</td></tr>
+        <tr><td>Tier-2 → Tier-2</td><td>96h</td><td>72h</td><td>84h</td><td>Dashboard flag only</td></tr>
+        <tr><td>Remote / Rural</td><td>120h</td><td>N/A</td><td>N/A</td><td>Dashboard flag only</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.25);border-radius:10px;padding:16px;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:#a78bfa;margin-bottom:8px;letter-spacing:1px;">⚡ AI PROACTIVE PREDICTION</div>
+    <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8">
+      The SLA engine doesn't just react — it predicts. If AI forecasts hub congestion on a route will cause a breach, it fires a YELLOW alert 12 hours before the threshold is actually hit. This gives ops teams time to reroute or expedite before the SLA is actually breached.
+    </div>
+  </div>
+</div>
+
+<!-- ========== PARTNERS ========== -->
+<div id="tab-partners" class="arch-view">
+  <h2 style="font-size:22px;font-weight:800;color:var(--green);margin-bottom:8px;">3PL Partner Integration</h2>
+  <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:24px;">Unified adapter pattern: adding a new partner = 1 adapter class, zero core service changes.</p>
+
+  <div style="background:var(--panel);border-radius:10px;padding:20px;margin-bottom:24px;border:1px solid var(--border);">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:16px;letter-spacing:1px;">ARCHITECTURE FLOW</div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-family:'Space Mono',monospace;font-size:10px;">
+      <div style="background:rgba(0,229,255,0.1);border:1px solid var(--accent);border-radius:6px;padding:8px 12px;color:var(--accent)">Booking Service</div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(124,58,237,0.1);border:1px solid var(--accent2);border-radius:6px;padding:8px 12px;color:#a78bfa">Partner Service<br><span style="font-size:8px">(single internal API)</span></div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(245,158,11,0.1);border:1px solid var(--accent3);border-radius:6px;padding:8px 12px;color:var(--accent3)">Adapter Registry<br><span style="font-size:8px">(one per partner)</span></div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(34,211,168,0.1);border:1px solid var(--green);border-radius:6px;padding:8px 12px;color:var(--green)">Partner APIs<br><span style="font-size:8px">(Shadowfax / Dunzo...)</span></div>
+    </div>
+    <div style="margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-family:'Space Mono',monospace;font-size:10px;">
+      <div style="background:rgba(34,211,168,0.1);border:1px solid var(--green);border-radius:6px;padding:8px 12px;color:var(--green)">Partner Webhooks</div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(124,58,237,0.1);border:1px solid var(--accent2);border-radius:6px;padding:8px 12px;color:#a78bfa">Normalize to<br>Internal Status</div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(245,158,11,0.1);border:1px solid var(--accent3);border-radius:6px;padding:8px 12px;color:var(--accent3)">Kafka Event</div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(0,229,255,0.1);border:1px solid var(--accent);border-radius:6px;padding:8px 12px;color:var(--accent)">Tracking + Notifications</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:24px;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">AI PARTNER ASSIGNMENT SCORING</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:22px;margin-bottom:6px">⚡</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:4px">ETA to Pickup</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)">Real-time availability API query</div>
+      </div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:22px;margin-bottom:6px">💰</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:4px">Cost per Pickup</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)">Dynamic rate from partner API</div>
+      </div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:22px;margin-bottom:6px">📊</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:4px">Success Rate</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)">Historical 30-day performance</div>
+      </div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:22px;margin-bottom:6px">💵</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:4px">COD Capability</div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)">Required if shipment is COD</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== AI ========== -->
+<div id="tab-ai" class="arch-view">
+  <h2 style="font-size:22px;font-weight:800;color:var(--accent);margin-bottom:8px;">AI Error Prevention — Full Map</h2>
+  <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:24px;">Every human touchpoint in the courier lifecycle is intercepted by an AI validation layer. This is your #1 launch priority.</p>
+
+  <div class="error-map" id="error-map"></div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.arch-view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  // RTO detail
+  const rtoStages = [
+    { icon:'❌', title:'Delivery Failed', body:'Driver marks DELIVERY_FAILED in app with reason code. System records immutable FAILED_ATTEMPT event. Customer notified with rescheduling link. Attempt counter incremented. If < 3: next attempt scheduled. If = 3: RTO auto-triggered.' },
+    { icon:'🔄', title:'Return Initiated', body:'Status updated to RETURN_INITIATED in Parcel Details table. Seller notified via webhook + email + portal. New reverse_tracking_number generated. Return charge queued for next invoice. SLA clock starts for return journey.' },
+    { icon:'🛵', title:'Return Pickup', body:'Dispatch Service creates reverse assignment: a driver is assigned to collect the parcel from the failed delivery location or nearest hub. Driver app shows return pickups separately from forward deliveries. GPS tracking active.' },
+    { icon:'🚚', title:'Return In Transit', body:'Parcel in reverse journey toward origin hub. Standard geo-fencing triggers apply. Customer tracking page shows return status. Seller dashboard shows live return tracking via B2B portal or webhook.' },
+    { icon:'🏭', title:'At Origin Hub', body:'Parcel arrives at origin hub, scanned, and segregated into return bay. Seller notified with pickup ready alert. Hub manager assigns to seller collection slot or arranges outbound delivery to seller warehouse.' },
+    { icon:'✅', title:'Return Delivered', body:'Parcel handed to seller or origin warehouse. System auto-fires: (1) COD refund to Payment Service if applicable, (2) seller inventory updated, (3) return charge added to invoice, (4) shipment record closed. Zero manual steps.' },
+  ];
+
+  function showRto(i) {
+    const d = rtoStages[i];
+    const box = document.getElementById('rto-detail');
+    box.innerHTML = `<div class="drawer-title">${d.icon} ${d.title}</div><div class="drawer-sub">CLICK ANOTHER STAGE TO NAVIGATE</div><div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8">${d.body}</div>`;
+    box.classList.add('show');
+  }
+
+  // AI Error map
+  const errors = [
+    { touchpoint: '📝 D2C Weight Entry', risk: 'Wrong weight = undercharging', ai: 'Auto-suggest from historical data for same route/parcel type. Weight mismatch detection at hub scan — holds parcel and alerts manager.', level: 'HIGH' },
+    { touchpoint: '🗺 Pincode Entry', risk: 'Typos = undeliverable', ai: 'Real-time Google Maps Geocoding validation on every character. Auto-correct if confident (>95% match). Flag for review if ambiguous. Hard block on unserviceable pincodes.', level: 'HIGH' },
+    { touchpoint: '📸 B2B Bulk Scan', risk: 'Missed parcels, wrong counts', ai: 'YOLOv8 CV model counts every parcel in photo. EasyOCR reads labels. Alert if AI count ≠ agent-entered manifest count. Damage detection flags crushed/wet packaging.', level: 'CRITICAL' },
+    { touchpoint: '🏭 Hub Scan', risk: 'Wrong ref ID entered manually', ai: 'OCR reads printed label automatically. System validates scanned ID against DB. Hard block if mismatch. Duplicate detection prevents same parcel being scanned twice.', level: 'HIGH' },
+    { touchpoint: '💵 COD Amount Entry', risk: 'Driver enters wrong amount', ai: 'COD amount field is pre-filled and read-only in driver app. Driver taps Confirm only. Cannot modify. Hub reconciliation AI compares physical cash vs system total — flags ±5% variance.', level: 'CRITICAL' },
+    { touchpoint: '📍 Delivery Confirmation', risk: 'Delivered to wrong person/location', ai: 'GPS must be within 200m of delivery address at confirmation time. OTP required (not optional). Photo proof uploaded and AI-validated to show a parcel handoff. Manager override needed for exceptions.', level: 'CRITICAL' },
+    { touchpoint: '🏠 Address at Booking', risk: 'Incomplete / ambiguous address', ai: 'Google Maps Places Autocomplete at input time. Geocoding confidence score checked — below 80% triggers "please verify address" prompt. Postcode-to-city cross-validation runs on save.', level: 'MEDIUM' },
+    { touchpoint: '📋 Duplicate Booking', risk: 'Same shipment created twice', ai: 'On booking create: hash of (sender_id + recipient_phone + weight + date) checked against last 24h. Duplicate detected → block + show existing shipment to agent.', level: 'MEDIUM' },
+  ];
+
+  const levelColors = { CRITICAL: 'var(--red)', HIGH: 'var(--accent3)', MEDIUM: 'var(--accent)' };
+
+  const map = document.getElementById('error-map');
+  errors.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'error-row';
+    div.style.cssText = 'cursor:pointer;';
+    div.innerHTML = `
+      <div class="error-row-header" onclick="toggleAIRow(${i})">
+        <div class="error-cell">
+          <div class="label">TOUCHPOINT</div>
+          <div class="value" style="font-size:13px">${e.touchpoint}</div>
+        </div>
+        <div class="error-cell">
+          <div class="label">HUMAN ERROR RISK</div>
+          <div class="value" style="color:${levelColors[e.level]}">${e.risk}</div>
+        </div>
+        <div class="error-cell">
+          <div class="label">RISK LEVEL &nbsp;<span class="pill pill-${e.level==='CRITICAL'?'red':e.level==='HIGH'?'yellow':'blue'}">${e.level}</span></div>
+          <div class="value" style="font-size:11px;color:var(--muted)">Click to see AI solution →</div>
+        </div>
+      </div>
+      <div id="ai-row-${i}" style="display:none;padding:14px 20px;background:rgba(0,229,255,0.04);border-top:1px solid var(--border)">
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:1px;margin-bottom:6px">🤖 AI PREVENTION MECHANISM</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8">${e.ai}</div>
+      </div>
+    `;
+    map.appendChild(div);
+  });
+
+  function toggleAIRow(i) {
+    const el = document.getElementById('ai-row-' + i);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+</script>
+</body>
+</html>

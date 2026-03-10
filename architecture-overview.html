@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartCourier AI — System Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07090f;
+    --panel: #0e1118;
+    --border: #1e2535;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --green: #22d3a8;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --card: #111827;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 32px 40px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .main {
+    position: relative;
+    z-index: 5;
+    padding: 32px 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* Layer tabs */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .tab:hover { border-color: var(--accent); color: var(--accent); }
+  .tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+  /* Architecture view */
+  .arch-view { display: none; }
+  .arch-view.active { display: block; }
+
+  /* Layers */
+  .layer {
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .layer:hover { border-color: var(--accent); }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    cursor: pointer;
+    background: var(--panel);
+    user-select: none;
+  }
+
+  .layer-icon { font-size: 18px; }
+  .layer-title { font-size: 14px; font-weight: 700; letter-spacing: 0.3px; }
+  .layer-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-left: auto;
+    letter-spacing: 1px;
+  }
+
+  .layer-chevron {
+    font-size: 12px;
+    color: var(--muted);
+    transition: transform 0.25s;
+    margin-left: 8px;
+  }
+
+  .layer.open .layer-chevron { transform: rotate(90deg); }
+
+  .layer-body {
+    display: none;
+    padding: 20px;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+  }
+
+  .layer.open .layer-body { display: block; }
+
+  /* Component grid */
+  .comp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .comp-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .comp-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,229,255,0.08);
+  }
+
+  .comp-card.selected {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.05);
+  }
+
+  .comp-name {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .comp-desc {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .comp-status {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .status-core { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-ai { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .status-opt { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+  .status-gap { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  /* Detail panel */
+  .detail-panel {
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 8px;
+    display: none;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .detail-panel.show { display: block; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .detail-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; color: var(--accent); }
+  .detail-body { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); line-height: 1.8; }
+
+  /* Lifecycle view */
+  .lifecycle {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    scrollbar-color: var(--accent) var(--border);
+  }
+
+  .lc-stage {
+    flex: 0 0 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+
+  .lc-stage::after {
+    content: '→';
+    position: absolute;
+    right: -10px;
+    top: 28px;
+    color: var(--muted);
+    font-size: 16px;
+    z-index: 2;
+  }
+
+  .lc-stage:last-child::after { display: none; }
+
+  .lc-num {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    background: var(--panel);
+    margin-bottom: 10px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .lc-stage:hover .lc-num {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.08);
+    box-shadow: 0 0 20px rgba(0,229,255,0.15);
+  }
+
+  .lc-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* DB Schema */
+  .schema-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .schema-table {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .schema-table:hover { border-color: var(--accent2); transform: translateY(-2px); }
+
+  .schema-table-header {
+    background: rgba(124,58,237,0.2);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .schema-table-name { font-size: 12px; font-weight: 700; color: var(--accent2); }
+
+  .schema-fields {
+    padding: 10px 14px;
+  }
+
+  .schema-field {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+
+  .field-type { color: var(--accent3); }
+  .field-pk { color: var(--green); font-weight: 700; }
+
+  /* Gap analysis */
+  .gap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .gap-card {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 18px;
+    border-left: 3px solid;
+  }
+
+  .gap-card.critical { border-color: var(--red); }
+  .gap-card.important { border-color: var(--accent3); }
+  .gap-card.nice { border-color: var(--green); }
+
+  .gap-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .gap-card.critical .gap-label { color: var(--red); }
+  .gap-card.important .gap-label { color: var(--accent3); }
+  .gap-card.nice .gap-label { color: var(--green); }
+
+  .gap-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .gap-desc { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); line-height: 1.7; }
+
+  /* Stack pills */
+  .stack-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .stack-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+    letter-spacing: 0.5px;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    header, .main { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    <div>
+      <div class="logo-text">SmartCourier AI</div>
+      <div class="logo-sub">SYSTEM ARCHITECTURE v1.0</div>
+    </div>
+  </div>
+  <span class="badge">ENTERPRISE LOGISTICS PLATFORM</span>
+</header>
+
+<div class="main">
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('overview')">🏗 Architecture Overview</div>
+    <div class="tab" onclick="switchTab('lifecycle')">🔄 Parcel Lifecycle</div>
+    <div class="tab" onclick="switchTab('database')">🗄 Data Schema</div>
+    <div class="tab" onclick="switchTab('gaps')">⚠️ Gap Analysis</div>
+    <div class="tab" onclick="switchTab('stack')">⚡ Tech Stack</div>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div id="tab-overview" class="arch-view active">
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Core Module</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> AI-Powered</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div> Optional/Phase 2</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Gap — Needs Design</div>
+    </div>
+
+    <!-- Layer 1: Client Layer -->
+    <div class="layer open" id="layer-client">
+      <div class="layer-header" onclick="toggleLayer('layer-client')">
+        <span class="layer-icon">🌐</span>
+        <span class="layer-title">CLIENT / PRESENTATION LAYER</span>
+        <span class="layer-tag" style="background:rgba(34,211,168,0.1);color:var(--green);border:1px solid var(--green)">FRONTEND</span>
+        <span class="layer-chevron">▶</span>
+      </div>
+      <div class="layer-body">
+        <div class="comp-grid">
+          <div class="comp-card" onclick="showDetail('web-portal')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">D2C Web Portal</div>
+            <div class="comp-desc">Rate calc · Booking · Tracking · Pickup scheduling</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('driver-app')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Driver Mobile App</div>
+            <div class="comp-desc">Parcel list · Navigation · OTP · Photo proof · Voice AI</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('b2b-app')">
+            <div class="comp-status status-ai"></div>
+            <div class="comp-name">B2B Agent App</div>
+            <div class="comp-desc">AI Photo Scanner · Bulk creation · Ref ID generation</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('admin-dash')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Admin Dashboard</div>
+            <div class="comp-desc">KPIs · Fleet view · Hub ops · AI forecasts · RBAC</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('hub-panel')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Hub Operator Panel</div>
+            <div class="comp-desc">Scan parcels · Print labels · Assign drivers · Capacity</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('tracking-page')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Public Tracking Page</div>
+            <div class="comp-desc">track.mycourier.com · Timeline · ETA · Notifications</div>
+          </div>
+        </div>
+        <div id="detail-web-portal" class="detail-panel">
+          <div class="detail-title">D2C Web Portal</div>
+          <div class="detail-body">
+            FLOW: Rate check → Weight/dim input → Chargeable weight calc → Pickup or Drop → Slot selection → Payment → Booking confirmation<br><br>
+            KEY APIs: POST /booking/rate-check · POST /booking/create · GET /slots/available<br><br>
+            TECH: Next.js · Tailwind · Google Maps API for pincode validation
+          </div>
+        </div>
+        <div id="detail-driver-app" class="detail-panel">
+          <div class="detail-title">Driver Mobile App</div>
+          <div class="detail-body">
+            FEATURES: Assigned parcel list · Optimized route · OTP delivery confirm · Signature capture · Photo upload · Voice commands (Phase 2)<br><br>
+            OFFLINE MODE: Critical for areas with poor connectivity. Cache parcel list locally, sync on reconnect.<br><br>
+            TECH: Flutter · GPS continuous tracking · Firebase push notifications
+          </div>
+        </div>
+        <div id="detail-b2b-app" class="detail-panel">
+          <div class="detail-title">B2B Agent App — AI Photo Scanner</div>
+          <div class="detail-body">
+            FLOW: Agent photographs batch of parcels → AI detects each parcel → segments labels → counts items → generates ref_document_id per parcel → agent writes ID on parcel physically<br><br>
+            AI MODEL: YOLOv8 object detection + OCR for label reading<br><br>
+            OUTPUT: ref_document_id · estimated_weight · package_category · image_archive
+          </div>
+        </div>
+        <div id="detail-admin-dash" class="detail-panel">
+          <div class="detail-title">Admin Dashboard</div>
+          <div class="detail-body">
+            SECTIONS: Fleet map (live GPS) · Hub capacity gauges · Parcel pipeline · Driver leaderboard · Delay alerts · Revenue analytics<br><br>
+            AI PANELS: Hub congestion forecast · Demand prediction · Delay probability by route<br><br>
+            ACCESS: Role-based — Admin sees all; Hub Manager sees own hub only
+          </div>
+        </div>
+        <div id="detail-hub-panel" class="detail-panel">
+          <div class="detail-title">Hub Operator Panel</div>
+          <div class="detail-body">
+            SCAN FLOW: Scan ref_document_id → System validates → Print QR + barcode label → Paste on parcel → Assign to vehicle bay<br><br>
+            VALIDATIONS: Duplicate detection · Hub capacity check · Invalid ref ID · Weight mismatch alert<br><br>
+            PRINTS: Label contains tracking_number + customer_code + shipment_uuid + hub_id
+          </div>
+        </div>
+        <div id="detail-tracking-page" class="detail-panel">
+          <div class="detail-title">Public Tracking Page</div>
+          <div class="detail-body">
+            URL: track.mycourier.com/{tracking_number}<br><br>
+            SHOWS: Status timeline pulled from Shipment History · Current geo-location on map · ETA · Notification preferences · Delivery attempt history<br><br>
+            PERFORMANCE: &lt;100ms API response · CDN-cached for read-heavy traffic
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 2: API Gateway -->
+    <div class="layer" id="layer-api">
+      <div class="layer-header" onclick="toggleLayer('layer-api')">
+        <span class="layer-icon">🔀</span>
+        <span class="layer-title">API GATEWAY & EVENT BUS</span>
+        <span class="layer-tag" style="background:rgba(0,229,255,0.1);color:var(--accent);border:1px solid var(--accent)">INFRA</span>
+        <span class="layer-chevron">▶</span>
+      </div>
+      <div class="layer-body">
+        <div class="comp-grid">
+          <div class="comp-card" onclick="showDetail('api-gw')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">API Gateway</div>
+            <div class="comp-desc">Auth · Rate limiting · Routing · SSL termination</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('event-bus')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Event Streaming (Kafka)</div>
+            <div class="comp-desc">Status change events · Geo updates · Notification triggers</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('websocket')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">WebSocket Server</div>
+            <div class="comp-desc">Real-time tracking · Live driver GPS · Hub dashboard feed</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('webhook')">
+            <div class="comp-status status-opt"></div>
+            <div class="comp-name">Webhook Engine</div>
+            <div class="comp-desc">B2B client callbacks · 3PL partner events · Payment gateway</div>
+          </div>
+        </div>
+        <div id="detail-api-gw" class="detail-panel">
+          <div class="detail-title">API Gateway</div>
+          <div class="detail-body">
+            TOOL: Kong or AWS API Gateway<br><br>
+            RESPONSIBILITIES: JWT auth validation · API key management for B2B · Rate limiting (booking: 200ms SLA, tracking: 100ms) · Request logging · Circuit breaker for downstream services
+          </div>
+        </div>
+        <div id="detail-event-bus" class="detail-panel">
+          <div class="detail-title">Event Streaming — Kafka</div>
+          <div class="detail-body">
+            TOPICS: shipment.status.changed · driver.location.updated · hub.capacity.updated · notification.trigger · payment.event<br><br>
+            CONSUMERS: Notification Service · Analytics Engine · AI Prediction Service · Audit Logger<br><br>
+            RETENTION: 7 days for replay capability
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 3: Core Microservices -->
+    <div class="layer" id="layer-services">
+      <div class="layer-header" onclick="toggleLayer('layer-services')">
+        <span class="layer-icon">⚙️</span>
+        <span class="layer-title">CORE MICROSERVICES</span>
+        <span class="layer-tag" style="background:rgba(34,211,168,0.1);color:var(--green);border:1px solid var(--green)">BACKEND</span>
+        <span class="layer-chevron">▶</span>
+      </div>
+      <div class="layer-body">
+        <div class="comp-grid">
+          <div class="comp-card" onclick="showDetail('booking-svc')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Booking Service</div>
+            <div class="comp-desc">Rate calc · Shipment create · UUID gen · Slot mgmt</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('tracking-svc')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Tracking Service</div>
+            <div class="comp-desc">Status updates · History ledger · Timeline builder</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('dispatch-svc')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Dispatch Service</div>
+            <div class="comp-desc">Driver assignment · Delivery zone mapping · Load balancing</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('geo-svc')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Geo / GPS Service</div>
+            <div class="comp-desc">Geo-fencing · Auto status triggers · Route tracking</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('notif-svc')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Notification Service</div>
+            <div class="comp-desc">Email · SMS · WhatsApp · Push · Event-driven triggers</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('hub-svc')">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Hub Operations Service</div>
+            <div class="comp-desc">Scan processing · Label print · Capacity management</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('payment-svc')">
+            <div class="comp-status status-gap"></div>
+            <div class="comp-name">Payment & Billing ⚠️</div>
+            <div class="comp-desc">COD · Invoicing · Reconciliation · Wallet — NOT IN BRIEF</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('returns-svc')">
+            <div class="comp-status status-gap"></div>
+            <div class="comp-name">Returns / RTO Service ⚠️</div>
+            <div class="comp-desc">Reverse logistics · RTO flow · Refund trigger — MISSING</div>
+          </div>
+        </div>
+        <div id="detail-booking-svc" class="detail-panel">
+          <div class="detail-title">Booking Service</div>
+          <div class="detail-body">
+            APIs: POST /booking/rate-check · POST /booking/create · POST /booking/b2b-bulk · GET /booking/{uuid} · PATCH /booking/{uuid}/cancel<br><br>
+            LOGIC: Chargeable weight = max(actual, L×W×H / 5000) · Pincode validation → route existence check · Duplicate shipment detection · Auto-assign pickup partner (Dunzo/Shadowfax API)<br><br>
+            SLA: Response &lt; 200ms
+          </div>
+        </div>
+        <div id="detail-payment-svc" class="detail-panel">
+          <div class="detail-title">⚠️ Payment & Billing — GAP IDENTIFIED</div>
+          <div class="detail-body">
+            THIS MODULE IS MISSING FROM YOUR BRIEF. Required features:<br><br>
+            COD (Cash on Delivery) collection + remittance to seller<br>
+            Prepaid booking via Razorpay/Stripe<br>
+            B2B monthly invoice generation<br>
+            Wallet top-up for corporate clients<br>
+            Reconciliation engine (payments vs deliveries)<br>
+            Failed delivery refund automation
+          </div>
+        </div>
+        <div id="detail-returns-svc" class="detail-panel">
+          <div class="detail-title">⚠️ Returns / RTO Service — GAP IDENTIFIED</div>
+          <div class="detail-body">
+            MISSING FROM BRIEF. Return-to-origin is critical for ecommerce logistics.<br><br>
+            FLOW: Failed delivery (3 attempts) → Auto trigger RTO → Reverse tracking events → Origin hub return scan → Seller notification → Refund trigger<br><br>
+            Also needed: Customer-initiated returns (reverse pickup scheduling)
+          </div>
+        </div>
+        <div id="detail-geo-svc" class="detail-panel">
+          <div class="detail-title">Geo / GPS Service</div>
+          <div class="detail-body">
+            REAL-TIME: Driver app sends GPS ping every 30s → Kafka event → WebSocket broadcast to tracking page<br><br>
+            GEO-FENCING TRIGGERS:<br>
+            Driver leaves pickup zone → PICKED_UP<br>
+            Truck enters highway → IN_TRANSIT<br>
+            Truck enters dest hub zone → DESTINATION_HUB<br>
+            Driver enters delivery zone → OUT_FOR_DELIVERY<br><br>
+            TECH: PostGIS for geo-queries · Google Maps for routing
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 4: AI Layer -->
+    <div class="layer" id="layer-ai">
+      <div class="layer-header" onclick="toggleLayer('layer-ai')">
+        <span class="layer-icon">🤖</span>
+        <span class="layer-title">AI & AUTOMATION LAYER</span>
+        <span class="layer-tag" style="background:rgba(0,229,255,0.1);color:var(--accent);border:1px solid var(--accent)">AI/ML</span>
+        <span class="layer-chevron">▶</span>
+      </div>
+      <div class="layer-body">
+        <div class="comp-grid">
+          <div class="comp-card" onclick="showDetail('ai-scanner')">
+            <div class="comp-status status-ai"></div>
+            <div class="comp-name">Parcel Vision AI</div>
+            <div class="comp-desc">YOLO detection · Label OCR · Count · Damage detection</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('ai-route')">
+            <div class="comp-status status-ai"></div>
+            <div class="comp-name">Route Optimizer</div>
+            <div class="comp-desc">Vehicle load · Multi-stop TSP · ETA prediction</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('ai-fraud')">
+            <div class="comp-status status-ai"></div>
+            <div class="comp-name">Fraud Detection</div>
+            <div class="comp-desc">Weight mismatch · Duplicate booking · Suspicious patterns</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('ai-forecast')">
+            <div class="comp-status status-ai"></div>
+            <div class="comp-name">Demand Forecasting</div>
+            <div class="comp-desc">Hub congestion · Driver demand · Delay probability</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('ai-sort')">
+            <div class="comp-status status-opt"></div>
+            <div class="comp-name">Smart Sorting AI</div>
+            <div class="comp-desc">Conveyor cam → auto-reads label → sorts to correct bay</div>
+          </div>
+          <div class="comp-card" onclick="showDetail('ai-voice')">
+            <div class="comp-status status-opt"></div>
+            <div class="comp-name">Voice AI (Driver)</div>
+            <div class="comp-desc">Hands-free status updates · Address navigation voice</div>
+          </div>
+        </div>
+        <div id="detail-ai-scanner" class="detail-panel">
+          <div class="detail-title">Parcel Vision AI — Computer Vision</div>
+          <div class="detail-body">
+            MODEL: YOLOv8 fine-tuned on courier parcel dataset<br><br>
+            PIPELINE: Photo input → Object detection → Instance segmentation → Label OCR (Tesseract/EasyOCR) → Parcel count → Damage flag → JSON output<br><br>
+            OUTPUT: { ref_document_id, parcel_count, estimated_weight, damage_detected: bool, image_archive_url }<br><br>
+            ACCURACY TARGET: &gt;95% parcel detection, &gt;90% label read
+          </div>
+        </div>
+        <div id="detail-ai-route" class="detail-panel">
+          <div class="detail-title">Route Optimizer</div>
+          <div class="detail-body">
+            ALGORITHM: Vehicle Routing Problem (VRP) with capacity constraints<br><br>
+            INPUTS: Parcel destinations · Vehicle capacity · Driver start location · Traffic data (Google Maps API) · Hub congestion level<br><br>
+            OUTPUTS: Optimized stop sequence · Estimated time per stop · Total route ETA<br><br>
+            TECH: Google OR-Tools / custom ML model trained on historical routes
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 5: Data Layer -->
+    <div class="layer" id="layer-data">
+      <div class="layer-header" onclick="toggleLayer('layer-data')">
+        <span class="layer-icon">🗄</span>
+        <span class="layer-title">DATA & STORAGE LAYER</span>
+        <span class="layer-tag" style="background:rgba(124,58,237,0.1);color:var(--accent2);border:1px solid var(--accent2)">DATABASE</span>
+        <span class="layer-chevron">▶</span>
+      </div>
+      <div class="layer-body">
+        <div class="comp-grid">
+          <div class="comp-card">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">PostgreSQL (Primary)</div>
+            <div class="comp-desc">Shipments · Customers · Hubs · Drivers · Assignments</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Redis (Cache)</div>
+            <div class="comp-desc">Tracking page cache · Session · Rate limit counters · Slots</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-status status-ai"></div>
+            <div class="comp-name">PostGIS (Geo)</div>
+            <div class="comp-desc">Geo-fence polygons · Spatial queries · Route geometry</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">S3 / Object Store</div>
+            <div class="comp-desc">Parcel photos · Delivery proof · Scan image archives</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-status status-opt"></div>
+            <div class="comp-name">ClickHouse (Analytics)</div>
+            <div class="comp-desc">KPI aggregation · Historical trends · AI training data</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Kafka (Event Log)</div>
+            <div class="comp-desc">Immutable event stream · All status transitions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 6: Infra -->
+    <div class="layer" id="layer-infra">
+      <div class="layer-header" onclick="toggleLayer('layer-infra')">
+        <span class="layer-icon">☁️</span>
+        <span class="layer-title">INFRASTRUCTURE & SECURITY</span>
+        <span class="layer-tag" style="background:rgba(245,158,11,0.1);color:var(--accent3);border:1px solid var(--accent3)">DEVOPS</span>
+        <span class="layer-chevron">▶</span>
+      </div>
+      <div class="layer-body">
+        <div class="comp-grid">
+          <div class="comp-card">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Kubernetes (K8s)</div>
+            <div class="comp-desc">Container orchestration · Auto-scaling · Self-healing</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">AWS / GCP</div>
+            <div class="comp-desc">Multi-region · CDN · Managed DB · ML infra (SageMaker)</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">RBAC & Auth</div>
+            <div class="comp-desc">5 roles: Admin · Hub Manager · Driver · Corporate · Customer</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-status status-core"></div>
+            <div class="comp-name">Monitoring Stack</div>
+            <div class="comp-desc">Prometheus · Grafana · PagerDuty alerts · ELK logs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LIFECYCLE TAB -->
+  <div id="tab-lifecycle" class="arch-view">
+    <p style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;margin-bottom:24px;">
+      CLICK ANY STAGE for details · Each stage emits an immutable event to Shipment History
+    </p>
+    <div class="lifecycle">
+      <div class="lc-stage">
+        <div class="lc-num" onclick="showLcDetail(0)">📝</div>
+        <div class="lc-label">1. CUSTOMER<br>BOOKING</div>
+      </div>
+      <div class="lc-stage">
+        <div class="lc-num" onclick="showLcDetail(1)">📅</div>
+        <div class="lc-label">2. PICKUP<br>SCHEDULED</div>
+      </div>
+      <div class="lc-stage">
+        <div class="lc-num" onclick="showLcDetail(2)">🚴</div>
+        <div class="lc-label">3. DRIVER<br>PICKUP</div>
+      </div>
+      <div class="lc-stage">
+        <div class="lc-num" onclick="showLcDetail(3)">🏭</div>
+        <div class="lc-label">4. ORIGIN<br>HUB SCAN</div>
+      </div>
+      <div class="lc-stage">
+        <div class="lc-num" onclick="showLcDetail(4)">🚚</div>
+        <div class="lc-label">5. IN<br>TRANSIT</div>
+      </div>
+      <div class="lc-stage">
+        <div class="lc-num" onclick="showLcDetail(5)">📦</div>
+        <div class="lc-label">6. DESTINATION<br>HUB</div>
+      </div>
+      <div class="lc-stage">
+        <div class="lc-num" onclick="showLcDetail(6)">🛵</div>
+        <div class="lc-label">7. OUT FOR<br>DELIVERY</div>
+      </div>
+      <div class="lc-stage">
+        <div class="lc-num" onclick="showLcDetail(7)">✅</div>
+        <div class="lc-label">8. DELIVERED</div>
+      </div>
+    </div>
+
+    <div id="lc-detail-box" class="detail-panel" style="margin-top:24px;"></div>
+
+    <div style="margin-top:32px;padding:20px;background:var(--panel);border-radius:10px;border:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent3)">⚠️ MISSING LIFECYCLE BRANCHES (GAPS)</div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:2">
+        ❌ FAILED_ATTEMPT → retry scheduling → 3rd attempt fail → RTO trigger<br>
+        ❌ RETURN_INITIATED → reverse pickup → origin hub → seller notification<br>
+        ❌ DAMAGED_IN_TRANSIT → claim raised → insurance trigger<br>
+        ❌ HELD_AT_CUSTOMS → (for international expansion)<br>
+        ❌ LOST_IN_TRANSIT → compensation workflow
+      </div>
+    </div>
+  </div>
+
+  <!-- DATABASE TAB -->
+  <div id="tab-database" class="arch-view">
+    <p style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;margin-bottom:24px;">
+      CLICK ANY TABLE to expand fields · PK = Primary Key · FK = Foreign Key
+    </p>
+    <div class="schema-grid">
+
+      <div class="schema-table">
+        <div class="schema-table-header">📦 <span class="schema-table-name">PARCEL_DETAILS</span></div>
+        <div class="schema-fields">
+          <div class="schema-field"><span class="field-pk">shipment_uuid</span><span class="field-type">UUID PK</span></div>
+          <div class="schema-field"><span>tracking_number</span><span class="field-type">VARCHAR UNQ</span></div>
+          <div class="schema-field"><span>ref_document_id</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>customer_id</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>origin_pincode</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>destination_pincode</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>weight / dims</span><span class="field-type">DECIMAL</span></div>
+          <div class="schema-field"><span>chargeable_weight</span><span class="field-type">DECIMAL</span></div>
+          <div class="schema-field"><span>current_status</span><span class="field-type">ENUM</span></div>
+          <div class="schema-field"><span>created_at / delivered_at</span><span class="field-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-table-header">👤 <span class="schema-table-name">CUSTOMERS</span></div>
+        <div class="schema-fields">
+          <div class="schema-field"><span class="field-pk">customer_id</span><span class="field-type">UUID PK</span></div>
+          <div class="schema-field"><span>customer_type</span><span class="field-type">ENUM IND/COR</span></div>
+          <div class="schema-field"><span>customer_code</span><span class="field-type">VARCHAR UNQ</span></div>
+          <div class="schema-field"><span>name / phone / email</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>address / city / pincode</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>credit_limit</span><span class="field-type">DECIMAL</span></div>
+          <div class="schema-field"><span>kyc_verified</span><span class="field-type">BOOLEAN</span></div>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-table-header">📋 <span class="schema-table-name">SHIPMENT_HISTORY</span></div>
+        <div class="schema-fields">
+          <div class="schema-field"><span class="field-pk">status_id</span><span class="field-type">UUID PK</span></div>
+          <div class="schema-field"><span>shipment_uuid</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>status</span><span class="field-type">ENUM</span></div>
+          <div class="schema-field"><span>hub_id / driver_id</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>geo_coordinates</span><span class="field-type">POINT</span></div>
+          <div class="schema-field"><span>timestamp</span><span class="field-type">TIMESTAMPTZ</span></div>
+          <div class="schema-field"><span>notes / exception</span><span class="field-type">TEXT</span></div>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-table-header">🏭 <span class="schema-table-name">HUBS</span></div>
+        <div class="schema-fields">
+          <div class="schema-field"><span class="field-pk">hub_id</span><span class="field-type">UUID PK</span></div>
+          <div class="schema-field"><span>hub_name / city</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>pincode</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>capacity / current_load</span><span class="field-type">INT</span></div>
+          <div class="schema-field"><span>geo_coordinates</span><span class="field-type">POINT</span></div>
+          <div class="schema-field"><span>geo_fence_polygon</span><span class="field-type">POLYGON</span></div>
+          <div class="schema-field"><span>hub_type</span><span class="field-type">ENUM ORIGIN/DEST/BOTH</span></div>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-table-header">🚗 <span class="schema-table-name">VEHICLES</span></div>
+        <div class="schema-fields">
+          <div class="schema-field"><span class="field-pk">vehicle_id</span><span class="field-type">UUID PK</span></div>
+          <div class="schema-field"><span>vehicle_number</span><span class="field-type">VARCHAR UNQ</span></div>
+          <div class="schema-field"><span>type</span><span class="field-type">ENUM BIKE/VAN/TRUCK</span></div>
+          <div class="schema-field"><span>capacity_kg / vol_capacity</span><span class="field-type">DECIMAL</span></div>
+          <div class="schema-field"><span>driver_id</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>current_location</span><span class="field-type">POINT</span></div>
+          <div class="schema-field"><span>status</span><span class="field-type">ENUM</span></div>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-table-header">👨‍✈️ <span class="schema-table-name">DRIVERS</span></div>
+        <div class="schema-fields">
+          <div class="schema-field"><span class="field-pk">driver_id</span><span class="field-type">UUID PK</span></div>
+          <div class="schema-field"><span>name / phone</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>vehicle_id</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>current_hub</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>availability_status</span><span class="field-type">ENUM</span></div>
+          <div class="schema-field"><span>rating / deliveries_today</span><span class="field-type">DECIMAL/INT</span></div>
+          <div class="schema-field"><span>license_expiry</span><span class="field-type">DATE</span></div>
+        </div>
+      </div>
+
+      <div class="schema-table">
+        <div class="schema-table-header">📮 <span class="schema-table-name">DELIVERY_ASSIGNMENTS</span></div>
+        <div class="schema-fields">
+          <div class="schema-field"><span class="field-pk">assignment_id</span><span class="field-type">UUID PK</span></div>
+          <div class="schema-field"><span>shipment_uuid</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>driver_id / vehicle_id</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>assigned_at</span><span class="field-type">TIMESTAMPTZ</span></div>
+          <div class="schema-field"><span>delivery_status</span><span class="field-type">ENUM</span></div>
+          <div class="schema-field"><span>otp / signature_url</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>delivery_photo_url</span><span class="field-type">TEXT</span></div>
+        </div>
+      </div>
+
+      <div class="schema-table" style="border-color:var(--red)">
+        <div class="schema-table-header" style="background:rgba(239,68,68,0.1)">⚠️ <span class="schema-table-name" style="color:var(--red)">PAYMENTS (MISSING)</span></div>
+        <div class="schema-fields">
+          <div class="schema-field"><span class="field-pk">payment_id</span><span class="field-type">UUID PK</span></div>
+          <div class="schema-field"><span>shipment_uuid</span><span class="field-type">UUID FK</span></div>
+          <div class="schema-field"><span>payment_type</span><span class="field-type">ENUM COD/PREPAID</span></div>
+          <div class="schema-field"><span>amount / currency</span><span class="field-type">DECIMAL</span></div>
+          <div class="schema-field"><span>gateway_ref</span><span class="field-type">VARCHAR</span></div>
+          <div class="schema-field"><span>status</span><span class="field-type">ENUM</span></div>
+          <div class="schema-field"><span style="color:var(--red)">⚠️ NEEDS DESIGN</span><span></span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- GAP ANALYSIS TAB -->
+  <div id="tab-gaps" class="arch-view">
+    <p style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;margin-bottom:24px;">
+      Issues found by reviewing your brief + mind map against enterprise logistics standards
+    </p>
+    <div class="gap-grid">
+      <div class="gap-card critical">
+        <div class="gap-label">🔴 CRITICAL GAP</div>
+        <div class="gap-title">Payment & COD Engine</div>
+        <div class="gap-desc">No payment flow defined. COD is huge in Indian logistics. Need: COD collection, remittance to seller, prepaid booking, B2B invoicing, reconciliation, refund on failed delivery.</div>
+      </div>
+      <div class="gap-card critical">
+        <div class="gap-label">🔴 CRITICAL GAP</div>
+        <div class="gap-title">Returns & RTO Flow</div>
+        <div class="gap-desc">Reverse logistics is missing. 15-30% of ecommerce parcels are returned. Need: failed delivery → RTO trigger → reverse tracking → seller notification → refund automation.</div>
+      </div>
+      <div class="gap-card critical">
+        <div class="gap-label">🔴 CRITICAL GAP</div>
+        <div class="gap-title">SLA Breach Management</div>
+        <div class="gap-desc">No escalation logic defined. Need: SLA timers per route, auto-escalation on breach, manager alert, compensation trigger for delayed deliveries.</div>
+      </div>
+      <div class="gap-card important">
+        <div class="gap-label">🟡 IMPORTANT GAP</div>
+        <div class="gap-title">Failed Delivery Workflow</div>
+        <div class="gap-desc">What happens when nobody is home? Need: retry attempt scheduling (max 3), customer rescheduling link, safe-drop with photo, neighbor delivery option.</div>
+      </div>
+      <div class="gap-card important">
+        <div class="gap-label">🟡 IMPORTANT GAP</div>
+        <div class="gap-title">Partner API Layer (3PL)</div>
+        <div class="gap-desc">Dunzo / Shadowfax integration is mentioned but not architected. Need: unified 3PL adapter, webhook ingestion, status normalization, billing reconciliation per partner.</div>
+      </div>
+      <div class="gap-card important">
+        <div class="gap-label">🟡 IMPORTANT GAP</div>
+        <div class="gap-title">Pincode Serviceability Engine</div>
+        <div class="gap-desc">Rate check requires knowing which pincodes are serviceable. Need: pincode master database, route matrix, serviceable zone management, unserviceable pincode handling.</div>
+      </div>
+      <div class="gap-card important">
+        <div class="gap-label">🟡 IMPORTANT GAP</div>
+        <div class="gap-title">B2B Client Portal & API</div>
+        <div class="gap-desc">Corporate clients like Amazon sellers need a self-serve portal + REST API to push bulk manifests, track all their shipments, download invoices, and manage returns.</div>
+      </div>
+      <div class="gap-card nice">
+        <div class="gap-label">🟢 PHASE 2</div>
+        <div class="gap-title">Insurance & Claims Module</div>
+        <div class="gap-desc">High-value parcel insurance, damaged-in-transit claims, lost parcel compensation — not in brief but needed for enterprise clients.</div>
+      </div>
+      <div class="gap-card nice">
+        <div class="gap-label">🟢 PHASE 2</div>
+        <div class="gap-title">International / Cross-border</div>
+        <div class="gap-desc">Customs declaration, HS codes, international tracking handoff (DHL/FedEx API), duty calculation — not needed for v1 but should be in the roadmap.</div>
+      </div>
+      <div class="gap-card nice">
+        <div class="gap-label">🟢 PHASE 2</div>
+        <div class="gap-title">Driver Earnings & Payroll</div>
+        <div class="gap-desc">Driver incentive structure, daily earnings summary, payroll integration — improves driver retention and reduces ops cost.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECH STACK TAB -->
+  <div id="tab-stack" class="arch-view">
+    <p style="color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;margin-bottom:24px;">
+      Recommended production tech stack for 10M+ shipments/year · Click categories to explore
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--green)">🖥 Backend Services</div>
+        <div class="stack-row">
+          <span class="stack-pill" style="border-color:var(--green);color:var(--green)">Node.js (Booking API)</span>
+          <span class="stack-pill" style="border-color:var(--green);color:var(--green)">FastAPI (AI services)</span>
+          <span class="stack-pill" style="border-color:var(--green);color:var(--green)">Go (Geo/GPS service)</span>
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;line-height:1.7">
+          Node.js for booking/tracking (fast I/O)<br>
+          FastAPI for AI inference endpoints<br>
+          Go for high-throughput GPS events
+        </div>
+      </div>
+
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent2)">🗄 Databases</div>
+        <div class="stack-row">
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">PostgreSQL + PostGIS</span>
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">Redis</span>
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">ClickHouse</span>
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">S3</span>
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;line-height:1.7">
+          PostgreSQL: primary transactional DB<br>
+          PostGIS: geo-fencing & spatial queries<br>
+          Redis: tracking cache, sessions, slots<br>
+          ClickHouse: analytics aggregations
+        </div>
+      </div>
+
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">🤖 AI / ML</div>
+        <div class="stack-row">
+          <span class="stack-pill" style="border-color:var(--accent);color:var(--accent)">YOLOv8</span>
+          <span class="stack-pill" style="border-color:var(--accent);color:var(--accent)">EasyOCR</span>
+          <span class="stack-pill" style="border-color:var(--accent);color:var(--accent)">OR-Tools</span>
+          <span class="stack-pill" style="border-color:var(--accent);color:var(--accent)">TensorFlow</span>
+          <span class="stack-pill" style="border-color:var(--accent);color:var(--accent)">SageMaker</span>
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;line-height:1.7">
+          YOLOv8: parcel detection in B2B scanner<br>
+          EasyOCR: label reading<br>
+          OR-Tools: route optimization (VRP)<br>
+          SageMaker: model training + serving
+        </div>
+      </div>
+
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent3)">📱 Frontend & Mobile</div>
+        <div class="stack-row">
+          <span class="stack-pill" style="border-color:var(--accent3);color:var(--accent3)">Next.js (Web)</span>
+          <span class="stack-pill" style="border-color:var(--accent3);color:var(--accent3)">Flutter (Mobile)</span>
+          <span class="stack-pill" style="border-color:var(--accent3);color:var(--accent3)">Tailwind CSS</span>
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;line-height:1.7">
+          Next.js: customer portal + tracking page<br>
+          Flutter: single codebase for driver & agent apps (iOS + Android)<br>
+          Firebase: push notifications for mobile
+        </div>
+      </div>
+
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--green)">📡 Messaging & Streaming</div>
+        <div class="stack-row">
+          <span class="stack-pill" style="border-color:var(--green);color:var(--green)">Apache Kafka</span>
+          <span class="stack-pill" style="border-color:var(--green);color:var(--green)">Socket.io (WS)</span>
+          <span class="stack-pill" style="border-color:var(--green);color:var(--green)">Twilio (SMS)</span>
+          <span class="stack-pill" style="border-color:var(--green);color:var(--green)">Meta BSP (WhatsApp)</span>
+        </div>
+      </div>
+
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent2)">☁️ Infra & DevOps</div>
+        <div class="stack-row">
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">Kubernetes</span>
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">Docker</span>
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">Terraform</span>
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">AWS/GCP</span>
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">Prometheus</span>
+          <span class="stack-pill" style="border-color:var(--accent2);color:var(--accent2)">Grafana</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.arch-view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function toggleLayer(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  let activeDetail = null;
+  function showDetail(id) {
+    if (activeDetail === id) {
+      document.getElementById('detail-' + id).classList.remove('show');
+      activeDetail = null;
+      return;
+    }
+    if (activeDetail) document.getElementById('detail-' + activeDetail).classList.remove('show');
+    document.getElementById('detail-' + id).classList.add('show');
+    activeDetail = id;
+  }
+
+  const lcDetails = [
+    { icon:'📝', title:'Stage 1 — Customer Booking', body:`EVENT: BOOKED emitted → Shipment History\n\nD2C: Rate check → chargeable weight calc → payment → UUID + tracking number generated\nB2B: AI photo scan → ref_document_id → bulk manifest created\n\nVALIDATIONS: Pincode serviceability · Weight limits · Duplicate check\nNOTIFICATION: Booking confirmation (SMS + Email + WhatsApp)` },
+    { icon:'📅', title:'Stage 2 — Pickup Scheduled', body:`EVENT: PICKUP_SCHEDULED → Shipment History\n\nIf home pickup: Time slot selected → Auto-assign pickup partner (Dunzo/Shadowfax/own fleet)\nIf self-drop: Customer drops at nearest hub\n\nDRIVER: Pickup assignment created in Dispatch Service\nGAP ⚠️: Pickup rescheduling flow not defined in brief` },
+    { icon:'🚴', title:'Stage 3 — Driver Pickup', body:`EVENT: PICKED_UP → triggered by GEO-FENCE\n\nDriver opens app → sees assigned pickups → navigates to customer → scans parcel or enters ID → confirms pickup\n\nGEO TRIGGER: Driver leaves customer location geo-zone → auto status update\nPHOTO: Driver photos parcel at pickup for condition record\nNOTIFICATION: Customer notified parcel picked up` },
+    { icon:'🏭', title:'Stage 4 — Origin Hub Scan', body:`EVENT: ORIGIN_HUB_SCAN → Shipment History\n\nOperator scans ref_document_id → System prints QR + barcode label → Label pasted on parcel → Parcel sorted to correct lane\n\nAI CHECKS: Duplicate detection · Weight mismatch · Hub capacity overflow · Invalid ref ID\nSMART SORT (Phase 2): AI camera auto-reads label and triggers conveyor sorter` },
+    { icon:'🚚', title:'Stage 5 — In Transit', body:`EVENT: IN_TRANSIT → triggered by GEO-FENCE (truck leaves hub zone)\n\nAI Route Optimizer assigns truck → Optimal loading order → Vehicle departs for destination hub\n\nTRACKING: GPS ping every 30s → Kafka → WebSocket → Customer tracking page updates live\nETA: AI calculates ETA based on traffic + route + hub load` },
+    { icon:'📦', title:'Stage 6 — Destination Hub', body:`EVENT: DESTINATION_HUB → triggered by GEO-FENCE\n\nParcel unloaded → Scanned at destination hub → Zone mapping → Driver assignment for last mile\n\nAI DISPATCH: Delivery zone clustering → Optimal driver assignment → Vehicle load optimization\nCAPACITY: Destination hub load monitored → alert if overflow predicted` },
+    { icon:'🛵', title:'Stage 7 — Out For Delivery', body:`EVENT: OUT_FOR_DELIVERY → Shipment History\n\nDriver app shows: delivery list · optimized route · recipient details · navigation\n\nCUSTOMER: OTP sent to recipient · Live tracking link shared\nFAILED ATTEMPT ⚠️ (GAP): If no one home → reschedule or RTO — NOT DESIGNED IN BRIEF` },
+    { icon:'✅', title:'Stage 8 — Delivered', body:`EVENT: DELIVERED → Shipment History (IMMUTABLE)\n\nCONFIRMATION METHODS: OTP verify · Recipient signature · Photo proof · GPS location stamp\n\nRECORDS: delivered_at timestamp · driver_id · geo_coordinates · delivery_photo_url\nNOTIFICATIONS: Delivery confirmation → Customer + Seller\nCOD ⚠️ (GAP): If COD — cash collection confirmation + remittance flow not designed` },
+  ];
+
+  function showLcDetail(i) {
+    const box = document.getElementById('lc-detail-box');
+    const d = lcDetails[i];
+    box.innerHTML = `<div class="detail-title">${d.icon} ${d.title}</div><div class="detail-body" style="white-space:pre-line">${d.body}</div>`;
+    box.classList.add('show');
+  }
+</script>
+</body>
+</html>
